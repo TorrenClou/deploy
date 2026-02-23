@@ -20,7 +20,6 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/torrentclou
 
 jobs:
   build-and-push:
@@ -32,6 +31,11 @@ jobs:
     steps:
       - name: Checkout deploy repo
         uses: actions/checkout@v4
+
+      - name: Set image name (lowercase)
+        id: image
+        run: |
+          echo "name=ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/torrentclou" >> $GITHUB_OUTPUT
 
       - name: Determine refs
         id: refs
@@ -92,8 +96,8 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ${{ env.IMAGE_NAME }}:latest
-            ${{ env.IMAGE_NAME }}:${{ steps.version.outputs.full_tag }}
+            ${{ steps.image.outputs.name }}:latest
+            ${{ steps.image.outputs.name }}:${{ steps.version.outputs.full_tag }}
           labels: |
             org.opencontainers.image.title=TorrenCloud
             org.opencontainers.image.description=TorrenCloud All-in-One
