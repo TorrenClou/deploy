@@ -96,7 +96,6 @@ RUN mkdir -p /data/postgres /data/redis /data/downloads \
 # Copy built frontend (Next.js standalone)
 COPY --from=frontend-build /app/.next/standalone /app/frontend/
 COPY --from=frontend-build /app/.next/static /app/frontend/.next/static
-COPY --from=frontend-build /app/public /app/frontend/public
 
 # Copy published backend services
 COPY --from=backend-build /publish/api /app/api/
