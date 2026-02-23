@@ -77,12 +77,12 @@ export ADMIN_PASSWORD="${ADMIN_PASSWORD:-changeme}"
 export ADMIN_NAME="${ADMIN_NAME:-Admin}"
 
 # Frontend URL (for CORS)
-export FRONTEND_URL="http://127.0.0.1:3000"
+export FRONTEND_URL="http://localhost:3000"
 
 # Next.js server-side runtime vars
-export BACKEND_URL="http://127.0.0.1:8080"
+export BACKEND_URL="http://127.0.0.1:5000"
 export NEXTAUTH_SECRET="${NEXTAUTH_SECRET:-change-me-in-production}"
-export NEXTAUTH_URL="${NEXTAUTH_URL:-http://localhost}"
+export NEXTAUTH_URL="${NEXTAUTH_URL:-http://localhost:3000}"
 
 # Observability (optional)
 export Observability__LokiUrl="${OBSERVABILITY_LOKI_URL:-}"

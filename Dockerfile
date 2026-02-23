@@ -13,8 +13,8 @@ RUN yarn install --frozen-lockfile
 COPY frontend/ ./
 
 # NEXT_PUBLIC_ vars are baked at build time
-ARG NEXT_PUBLIC_API_URL=/api
-ARG NEXT_PUBLIC_BACKEND_URL=
+ARG NEXT_PUBLIC_API_URL=http://localhost:5000/api
+ARG NEXT_PUBLIC_BACKEND_URL=http://localhost:5000
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
 
@@ -60,7 +60,7 @@ FROM ubuntu:22.04 AS runtime
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install PostgreSQL 15, Redis, nginx, supervisord
+# Install PostgreSQL 15, Redis, supervisord
 RUN apt-get update && apt-get install -y --no-install-recommends \
       gnupg2 lsb-release curl ca-certificates \
     && echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
@@ -70,7 +70,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get update && apt-get install -y --no-install-recommends \
       postgresql-15 \
       redis-server \
-      nginx \
       supervisor \
     && rm -rf /var/lib/apt/lists/*
 
@@ -105,13 +104,12 @@ COPY --from=backend-build /publish/s3-worker /app/s3-worker/
 
 # Copy configuration files
 COPY config/supervisord.conf /etc/supervisor/conf.d/torrencloud.conf
-COPY config/nginx.conf /etc/nginx/sites-available/default
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Persistent data volumes
 VOLUME ["/data/postgres", "/data/redis", "/data/downloads"]
 
-EXPOSE 80
+EXPOSE 3000 5000
 
 ENTRYPOINT ["/entrypoint.sh"]
