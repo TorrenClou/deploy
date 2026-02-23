@@ -7,8 +7,8 @@
 FROM node:20-alpine AS frontend-build
 WORKDIR /app
 
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci --prefer-offline
+COPY frontend/package.json frontend/yarn.lock ./
+RUN yarn install --frozen-lockfile
 
 COPY frontend/ ./
 
