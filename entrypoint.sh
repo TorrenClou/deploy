@@ -83,6 +83,7 @@ export FRONTEND_URL="http://localhost:3000"
 export BACKEND_URL="http://127.0.0.1:5000"
 export NEXTAUTH_SECRET="${NEXTAUTH_SECRET:-change-me-in-production}"
 export NEXTAUTH_URL="${NEXTAUTH_URL:-http://localhost:3000}"
+export AUTH_TRUST_HOST=true
 
 # Observability (optional)
 export Observability__LokiUrl="${OBSERVABILITY_LOKI_URL:-}"
