@@ -20,7 +20,7 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/torrencloud
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/torrentclou
 
 jobs:
   build-and-push:
@@ -51,7 +51,7 @@ jobs:
       - name: Checkout backend
         uses: actions/checkout@v4
         with:
-          repository: gitnasr/TorrenClouBackend
+          repository: TorrenClou/backend
           ref: ${{ steps.refs.outputs.backend_ref }}
           path: backend
           token: ${{ secrets.DEPLOY_PAT }}
@@ -59,7 +59,7 @@ jobs:
       - name: Checkout frontend
         uses: actions/checkout@v4
         with:
-          repository: TorrenClou/TorrenClouFrontend
+          repository: TorrenClou/frontend
           ref: ${{ steps.refs.outputs.frontend_ref }}
           path: frontend
           token: ${{ secrets.DEPLOY_PAT }}
