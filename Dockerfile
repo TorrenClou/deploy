@@ -13,8 +13,8 @@ RUN yarn install --frozen-lockfile
 COPY frontend/ ./
 
 # NEXT_PUBLIC_ vars are baked at build time
-ARG NEXT_PUBLIC_API_URL=http://localhost:5000/api
-ARG NEXT_PUBLIC_BACKEND_URL=http://localhost:5000
+ARG NEXT_PUBLIC_API_URL=http://localhost:47200/api
+ARG NEXT_PUBLIC_BACKEND_URL=http://localhost:47200
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
 
@@ -110,6 +110,6 @@ RUN chmod +x /entrypoint.sh
 # Persistent data volumes
 VOLUME ["/data/postgres", "/data/redis", "/data/downloads"]
 
-EXPOSE 3000 5000
+EXPOSE 47100 47200
 
 ENTRYPOINT ["/entrypoint.sh"]

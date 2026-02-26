@@ -113,10 +113,10 @@ Write-Info "Starting TorrenCloud..."
 docker run -d `
     --name $ContainerName `
     --restart unless-stopped `
-    -p 3000:3000 `
-    -p 5000:5000 `
-    -p 3200:3200 `
-    -p 9090:9090 `
+    -p 47100:47100 `
+    -p 47200:47200 `
+    -p 47500:47500 `
+    -p 47600:47600 `
     -v torrencloud-pgdata:/data/postgres `
     -v torrencloud-redis:/data/redis `
     -v torrencloud-downloads:/data/downloads `
@@ -127,7 +127,7 @@ Write-Success "Container started"
 
 # ─── Wait for Healthy ────────────────────────────────────
 Write-Info "Waiting for services to start (this may take up to 60 seconds)..."
-$HealthUrl = "http://localhost:5000/api/health/ready"
+$HealthUrl = "http://localhost:47200/api/health/ready"
 $MaxWait = 90
 $Elapsed = 0
 $Healthy = $false
@@ -165,17 +165,17 @@ Write-Host "    ✓ TorrenCloud is ready!" -ForegroundColor Green
 Write-Host "  ══════════════════════════════════════════════" -ForegroundColor Green
 Write-Host ""
 Write-Host "  -- Services --" -ForegroundColor White
-Write-Host "  Frontend        " -NoNewline; Write-Host "http://localhost:3000" -ForegroundColor Cyan
-Write-Host "  API             " -NoNewline; Write-Host "http://localhost:5000/api" -ForegroundColor Cyan
-Write-Host "  Hangfire        " -NoNewline; Write-Host "http://localhost:5000/hangfire" -ForegroundColor Cyan
+Write-Host "  Frontend        " -NoNewline; Write-Host "http://localhost:47100" -ForegroundColor Cyan
+Write-Host "  API             " -NoNewline; Write-Host "http://localhost:47200/api" -ForegroundColor Cyan
+Write-Host "  Hangfire        " -NoNewline; Write-Host "http://localhost:47200/hangfire" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  -- Login --" -ForegroundColor White
 Write-Host "  Email           " -NoNewline; Write-Host "$AdminEmail" -ForegroundColor Yellow
 Write-Host "  Password        " -NoNewline; Write-Host "$AdminPassword" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "  -- Monitoring --" -ForegroundColor White
-Write-Host "  Grafana         " -NoNewline; Write-Host "http://localhost:3200" -ForegroundColor Cyan -NoNewline; Write-Host "     (admin / admin)" -ForegroundColor DarkGray
-Write-Host "  Prometheus      " -NoNewline; Write-Host "http://localhost:9090" -ForegroundColor Cyan
+Write-Host "  Grafana         " -NoNewline; Write-Host "http://localhost:47500" -ForegroundColor Cyan -NoNewline; Write-Host "     (admin / admin)" -ForegroundColor DarkGray
+Write-Host "  Prometheus      " -NoNewline; Write-Host "http://localhost:47600" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  ══════════════════════════════════════════════" -ForegroundColor Green
 Write-Host "  Config: $ConfigPath" -ForegroundColor DarkGray

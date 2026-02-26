@@ -66,8 +66,8 @@ docker pull "$IMAGE"
 echo "Starting TorrentClou..."
 docker run -d \
     --name "$CONTAINER_NAME" \
-    -p 3000:3000 \
-    -p 5000:5000 \
+    -p 47100:47100 \
+    -p 47200:47200 \
     -v torrencloud-pgdata:/data/postgres \
     -v torrencloud-redis:/data/redis \
     -v torrencloud-downloads:/data/downloads \
@@ -78,9 +78,9 @@ docker run -d \
 echo ""
 echo -e "${GREEN}TorrentClou is starting up!${NC}"
 echo ""
-echo "  Frontend:           http://localhost:3000"
-echo "  API:                http://localhost:5000/api"
-echo "  Hangfire Dashboard: http://localhost:5000/hangfire"
+echo "  Frontend:           http://localhost:47100"
+echo "  API:                http://localhost:47200/api"
+echo "  Hangfire Dashboard: http://localhost:47200/hangfire"
 echo ""
 echo "  View logs:  docker logs -f torrencloud"
 echo "  Stop:       docker stop torrencloud"

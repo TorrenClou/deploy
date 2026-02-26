@@ -127,10 +127,10 @@ info "Starting TorrenCloud..."
 docker run -d \
     --name "$CONTAINER_NAME" \
     --restart unless-stopped \
-    -p 3000:3000 \
-    -p 5000:5000 \
-    -p 3200:3200 \
-    -p 9090:9090 \
+    -p 47100:47100 \
+    -p 47200:47200 \
+    -p 47500:47500 \
+    -p 47600:47600 \
     -v torrencloud-pgdata:/data/postgres \
     -v torrencloud-redis:/data/redis \
     -v torrencloud-downloads:/data/downloads \
@@ -141,7 +141,7 @@ success "Container started"
 
 # ─── Wait for Healthy ────────────────────────────────────
 info "Waiting for services to start (this may take up to 60 seconds)..."
-HEALTH_URL="http://localhost:5000/api/health/ready"
+HEALTH_URL="http://localhost:47200/api/health/ready"
 MAX_WAIT=90
 ELAPSED=0
 
@@ -169,17 +169,17 @@ echo -e "${GREEN}${BOLD}    ✓ TorrenCloud is ready!${NC}"
 echo -e "${GREEN}${BOLD}  ══════════════════════════════════════════════${NC}"
 echo ""
 echo -e "  ${BOLD}── Services ──${NC}"
-echo -e "  Frontend        ${CYAN}http://localhost:3000${NC}"
-echo -e "  API             ${CYAN}http://localhost:5000/api${NC}"
-echo -e "  Hangfire        ${CYAN}http://localhost:5000/hangfire${NC}"
+echo -e "  Frontend        ${CYAN}http://localhost:47100${NC}"
+echo -e "  API             ${CYAN}http://localhost:47200/api${NC}"
+echo -e "  Hangfire        ${CYAN}http://localhost:47200/hangfire${NC}"
 echo ""
 echo -e "  ${BOLD}── Login ──${NC}"
 echo -e "  Email           ${YELLOW}${ADMIN_EMAIL}${NC}"
 echo -e "  Password        ${YELLOW}${ADMIN_PASSWORD}${NC}"
 echo ""
 echo -e "  ${BOLD}── Monitoring ──${NC}"
-echo -e "  Grafana         ${CYAN}http://localhost:3200${NC}     ${DIM}(admin / admin)${NC}"
-echo -e "  Prometheus      ${CYAN}http://localhost:9090${NC}"
+echo -e "  Grafana         ${CYAN}http://localhost:47500${NC}     ${DIM}(admin / admin)${NC}"
+echo -e "  Prometheus      ${CYAN}http://localhost:47600${NC}"
 echo ""
 echo -e "${GREEN}${BOLD}  ══════════════════════════════════════════════${NC}"
 echo -e "  ${DIM}Config: $(pwd)/.env${NC}"

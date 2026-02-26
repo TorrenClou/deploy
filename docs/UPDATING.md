@@ -49,7 +49,7 @@ docker stop torrencloud && docker rm torrencloud
 docker logs torrencloud 2>&1 | grep -i "migrat"
 
 # Check API health
-curl http://localhost:5000/api/health/ready
+curl http://localhost:47200/api/health/ready
 ```
 
 ### If something goes wrong
@@ -82,7 +82,7 @@ Instead of using `latest`, pin to a specific tag in your run command or script:
 
 ```bash
 docker run -d --name torrencloud \
-  -p 3000:3000 -p 5000:5000 \
+  -p 47100:47100 -p 47200:47200 \
   -v torrencloud-pgdata:/data/postgres \
   -v torrencloud-redis:/data/redis \
   -v torrencloud-downloads:/data/downloads \

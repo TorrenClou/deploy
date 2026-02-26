@@ -60,8 +60,8 @@ docker pull $Image
 Write-Host "Starting TorrentClou..."
 docker run -d `
     --name $ContainerName `
-    -p 3000:3000 `
-    -p 5000:5000 `
+    -p 47100:47100 `
+    -p 47200:47200 `
     -v torrencloud-pgdata:/data/postgres `
     -v torrencloud-redis:/data/redis `
     -v torrencloud-downloads:/data/downloads `
@@ -72,9 +72,9 @@ docker run -d `
 Write-Host ""
 Write-Host "TorrentClou is starting up!" -ForegroundColor Green
 Write-Host ""
-Write-Host "  Frontend:           http://localhost:3000"
-Write-Host "  API:                http://localhost:5000/api"
-Write-Host "  Hangfire Dashboard: http://localhost:5000/hangfire"
+Write-Host "  Frontend:           http://localhost:47100"
+Write-Host "  API:                http://localhost:47200/api"
+Write-Host "  Hangfire Dashboard: http://localhost:47200/hangfire"
 Write-Host ""
 Write-Host "  View logs:  docker logs -f torrencloud"
 Write-Host "  Stop:       docker stop torrencloud"

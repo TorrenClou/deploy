@@ -32,17 +32,17 @@ Edit `.env` and replace all `<CHANGE_ME>` values with your own secrets.
 
 **Or run directly:**
 ```bash
-docker run -d --name torrencloud -p 3000:3000 -p 5000:5000 -v torrencloud-pgdata:/data/postgres -v torrencloud-redis:/data/redis -v torrencloud-downloads:/data/downloads --env-file .env ghcr.io/torrenclou/torrentclou:latest
+docker run -d --name torrencloud -p 47100:47100 -p 47200:47200 -v torrencloud-pgdata:/data/postgres -v torrencloud-redis:/data/redis -v torrencloud-downloads:/data/downloads --env-file .env ghcr.io/torrenclou/torrentclou:latest
 ```
 
 ### 3. Open
 
 | Service | URL |
 |---------|-----|
-| Frontend | http://localhost:3000 |
-| API | http://localhost:5000/api |
-| API Health | http://localhost:5000/api/health/ready |
-| Hangfire Dashboard | http://localhost:5000/hangfire |
+| Frontend | http://localhost:47100 |
+| API | http://localhost:47200/api |
+| API Health | http://localhost:47200/api/health/ready |
+| Hangfire Dashboard | http://localhost:47200/hangfire |
 
 ---
 
@@ -82,7 +82,7 @@ Data is stored in Docker volumes that survive container restarts:
 | `ADMIN_EMAIL` | No | `admin@example.com` | Admin login email |
 | `ADMIN_PASSWORD` | Yes | - | Admin login password |
 | `ADMIN_NAME` | No | `Admin` | Admin display name |
-| `NEXTAUTH_URL` | No | `http://localhost:3000` | Public URL of the frontend |
+| `NEXTAUTH_URL` | No | `http://localhost:47100` | Public URL of the frontend |
 | `POSTGRES_DB` | No | `torrenclo` | Database name |
 | `POSTGRES_USER` | No | `torrenclo_user` | Database user |
 | `JWT_ISSUER` | No | `TorrenClou_API` | JWT issuer |

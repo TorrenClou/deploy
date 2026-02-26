@@ -128,7 +128,7 @@ cp .env.example .env
 ./run.sh
 ```
 
-Frontend at `http://localhost:3000`. API at `http://localhost:5000/api`.
+Frontend at `http://localhost:47100`. API at `http://localhost:47200/api`.
 
 ---
 

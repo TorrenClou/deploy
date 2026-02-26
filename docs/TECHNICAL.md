@@ -11,7 +11,7 @@ TorrentClou is a self-hosted torrent management platform with cloud storage inte
 │  ┌──────────────┐    ┌──────────────────────────────┐   │
 │  │   Next.js    │    │         .NET 9.0 API          │   │
 │  │  Frontend    │───>│     (Clean Architecture)      │   │
-│  │  :3000       │    │          :5000                │   │
+│  │  :47100      │    │          :47200               │   │
 │  └──────────────┘    └──────────┬───────────────────┘   │
 │                                  │                       │
 │                    ┌─────────────┼─────────────┐        │
@@ -26,7 +26,7 @@ TorrentClou is a self-hosted torrent management platform with cloud storage inte
 │         ┌────┴─────┐         ┌──────────┐               │
 │         │PostgreSQL│         │  Redis   │               │
 │         │  15      │         │  7       │               │
-│         │ :5432    │         │ :6379    │               │
+│         │ :47300   │         │ :47400   │               │
 │         └──────────┘         └──────────┘               │
 │                                                          │
 │  Process Manager: supervisord                            │
@@ -131,10 +131,10 @@ The workflow uses `concurrency: { group: build-combined, cancel-in-progress: tru
 
 | Process | Priority | Port | User |
 |---------|----------|------|------|
-| PostgreSQL 15 | 10 | 5432 (localhost only) | `postgres` |
-| Redis 7 | 20 | 6379 (localhost only) | `redis` |
-| .NET API | 30 | 5000 | `root` |
-| Next.js Frontend | 40 | 3000 | `root` |
+| PostgreSQL 15 | 10 | 47300 (localhost only) | `postgres` |
+| Redis 7 | 20 | 47400 (localhost only) | `redis` |
+| .NET API | 30 | 47200 | `root` |
+| Next.js Frontend | 40 | 47100 | `root` |
 | Torrent Worker | 50 | - | `root` |
 | Google Drive Worker | 50 | - | `root` |
 | S3 Worker | 50 | - | `root` |
@@ -157,13 +157,13 @@ On container start, `entrypoint.sh` runs:
 All services communicate over `127.0.0.1` inside the container:
 
 ```
-Browser → :3000 (Next.js)
-Browser → :5000 (.NET API)
-Next.js SSR → 127.0.0.1:5000 (server-side auth calls)
-.NET API → 127.0.0.1:5432 (PostgreSQL)
-.NET API → 127.0.0.1:6379 (Redis)
-Workers → 127.0.0.1:5432 (PostgreSQL)
-Workers → 127.0.0.1:6379 (Redis)
+Browser → :47100 (Next.js)
+Browser → :47200 (.NET API)
+Next.js SSR → 127.0.0.1:47200 (server-side auth calls)
+.NET API → 127.0.0.1:47300 (PostgreSQL)
+.NET API → 127.0.0.1:47400 (Redis)
+Workers → 127.0.0.1:47300 (PostgreSQL)
+Workers → 127.0.0.1:47400 (Redis)
 ```
 
 PostgreSQL and Redis are not exposed outside the container.

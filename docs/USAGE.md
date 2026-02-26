@@ -70,8 +70,8 @@ The script will:
 
 Wait about 30 seconds for all services to initialize, then open:
 
-- **http://localhost:3000** — Login page
-- **http://localhost:5000/api/health/ready** — Should return a healthy status
+- **http://localhost:47100** — Login page
+- **http://localhost:47200/api/health/ready** — Should return a healthy status
 
 Check logs if something isn't working:
 ```bash
@@ -82,7 +82,7 @@ docker logs -f torrencloud
 
 ### Login
 
-Navigate to `http://localhost:3000` and log in with the `ADMIN_EMAIL` and `ADMIN_PASSWORD` you set in `.env`.
+Navigate to `http://localhost:47100` and log in with the `ADMIN_EMAIL` and `ADMIN_PASSWORD` you set in `.env`.
 
 ### Adding Torrents
 
@@ -106,7 +106,7 @@ Navigate to `http://localhost:3000` and log in with the `ADMIN_EMAIL` and `ADMIN
 
 ### Hangfire Dashboard
 
-Access the background job dashboard at `http://localhost:5000/hangfire` to monitor:
+Access the background job dashboard at `http://localhost:47200/hangfire` to monitor:
 - Active downloads
 - Queued jobs
 - Failed jobs and retry status
@@ -141,7 +141,7 @@ docker exec -it torrencloud ls /data/downloads
 Or mount a local directory instead of a Docker volume:
 ```bash
 docker run -d --name torrencloud \
-  -p 3000:3000 -p 5000:5000 \
+  -p 47100:47100 -p 47200:47200 \
   -v torrencloud-pgdata:/data/postgres \
   -v torrencloud-redis:/data/redis \
   -v /path/to/your/downloads:/data/downloads \
@@ -160,12 +160,12 @@ If you deploy on a server with a domain name:
 
 1. Update `.env`:
    ```
-   NEXTAUTH_URL=https://your-domain.com:3000
+   NEXTAUTH_URL=https://your-domain.com:47100
    ```
 
 2. For Google Drive OAuth to work with a custom domain, the image must be rebuilt with:
    ```
-   docker build --build-arg NEXT_PUBLIC_BACKEND_URL=https://your-domain.com:5000 -t torrencloud-custom .
+   docker build --build-arg NEXT_PUBLIC_BACKEND_URL=https://your-domain.com:47200 -t torrencloud-custom .
    ```
 
 ## Troubleshooting
@@ -187,9 +187,9 @@ docker logs torrencloud 2>&1 | grep -i "error\|exception"
 
 ### Port already in use
 
-Another application is using port 3000 or 5000. Either stop that application or change the port mapping:
+Another application is using port 47100 or 47200. Either stop that application or change the port mapping:
 ```bash
-docker run -d --name torrencloud -p 3001:3000 -p 5001:5000 ...
+docker run -d --name torrencloud -p 47101:47100 -p 47201:47200 ...
 ```
 
-Then update `NEXTAUTH_URL=http://localhost:3001` in your `.env`.
+Then update `NEXTAUTH_URL=http://localhost:47101` in your `.env`.
