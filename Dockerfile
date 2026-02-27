@@ -105,7 +105,8 @@ COPY --from=backend-build /publish/s3-worker /app/s3-worker/
 # Copy configuration files
 COPY config/supervisord.conf /etc/supervisor/conf.d/torrencloud.conf
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY wait-for-db.sh /app/wait-for-db.sh
+RUN chmod +x /entrypoint.sh /app/wait-for-db.sh
 
 # Persistent data volumes
 VOLUME ["/data/postgres", "/data/redis", "/data/downloads"]
