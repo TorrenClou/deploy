@@ -60,8 +60,9 @@ su - postgres -c "/usr/lib/postgresql/15/bin/pg_ctl -D $PGDATA -w stop"
 # 2. Ensure directory permissions
 # -----------------------------------------------------------
 chown -R redis:redis /data/redis
-mkdir -p /data/downloads
+mkdir -p /data/downloads /data/prometheus /data/grafana
 chmod 777 /data/downloads
+chown -R grafana:grafana /data/grafana
 
 # -----------------------------------------------------------
 # 3. Export environment variables for .NET services
@@ -103,6 +104,12 @@ export Observability__OtlpEndpoint="${OBSERVABILITY_OTLP_ENDPOINT:-}"
 export Observability__OtlpHeaders="${OBSERVABILITY_OTLP_HEADERS:-}"
 export Observability__EnablePrometheus="${OBSERVABILITY_ENABLE_PROMETHEUS:-true}"
 export Observability__EnableTracing="${OBSERVABILITY_ENABLE_TRACING:-true}"
+
+# Grafana
+export GF_SECURITY_ADMIN_USER="${GRAFANA_ADMIN_USER:-admin}"
+export GF_SECURITY_ADMIN_PASSWORD="${GRAFANA_ADMIN_PASSWORD:-admin}"
+export GF_SERVER_HTTP_PORT=47500
+export GF_SERVER_ROOT_URL="http://localhost:47500"
 
 # .NET Runtime settings
 export DOTNET_gcServer=1

@@ -1,6 +1,7 @@
 # ============================================================
 # TorrenCloud All-in-One Image
 # Frontend + API + Workers + PostgreSQL 15 + Redis 7
+# + Prometheus + Grafana
 # ============================================================
 
 # ---- Stage 1: Frontend Build ----
@@ -62,7 +63,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Install PostgreSQL 15, Redis, supervisord
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      gnupg2 lsb-release curl ca-certificates \
+      gnupg2 lsb-release curl ca-certificates adduser libfontconfig1 musl \
     && echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
        > /etc/apt/sources.list.d/pgdg.list \
     && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
@@ -72,6 +73,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       redis-server \
       supervisor \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Prometheus
+RUN curl -fsSL https://github.com/prometheus/prometheus/releases/download/v2.48.1/prometheus-2.48.1.linux-amd64.tar.gz \
+      -o /tmp/prometheus.tar.gz \
+    && tar -xzf /tmp/prometheus.tar.gz -C /tmp \
+    && cp /tmp/prometheus-2.48.1.linux-amd64/prometheus /usr/local/bin/ \
+    && cp /tmp/prometheus-2.48.1.linux-amd64/promtool /usr/local/bin/ \
+    && mkdir -p /etc/prometheus /data/prometheus \
+    && rm -rf /tmp/prometheus*
+
+# Install Grafana
+RUN curl -fsSL https://dl.grafana.com/oss/release/grafana_10.2.3_amd64.deb -o /tmp/grafana.deb \
+    && dpkg -i /tmp/grafana.deb \
+    && rm /tmp/grafana.deb
 
 # Install .NET ASP.NET Runtime 9.0
 RUN curl -fsSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh \
@@ -86,11 +101,12 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && rm -rf /var/lib/apt/lists/*
 
 # Create data directories (volume mount points)
-RUN mkdir -p /data/postgres /data/redis /data/downloads \
+RUN mkdir -p /data/postgres /data/redis /data/downloads /data/prometheus /data/grafana \
              /app/tmp /app/tmp/bundle /app/logs \
              /var/log/supervisor \
     && chown -R postgres:postgres /data/postgres \
-    && chown -R redis:redis /data/redis
+    && chown -R redis:redis /data/redis \
+    && chown -R grafana:grafana /data/grafana
 
 # Copy built frontend (Next.js standalone)
 COPY --from=frontend-build /app/.next/standalone /app/frontend/
@@ -102,6 +118,13 @@ COPY --from=backend-build /publish/torrent-worker /app/torrent-worker/
 COPY --from=backend-build /publish/gdrive-worker /app/gdrive-worker/
 COPY --from=backend-build /publish/s3-worker /app/s3-worker/
 
+# Copy Prometheus config
+COPY config/prometheus.yml /etc/prometheus/prometheus.yml
+
+# Copy Grafana provisioning and dashboards
+COPY config/grafana/provisioning/ /etc/grafana/provisioning/
+COPY backend/observability/grafana/dashboards/ /var/lib/grafana/dashboards/
+
 # Copy configuration files
 COPY config/supervisord.conf /etc/supervisor/conf.d/torrencloud.conf
 COPY entrypoint.sh /entrypoint.sh
@@ -109,8 +132,8 @@ COPY wait-for-db.sh /app/wait-for-db.sh
 RUN chmod +x /entrypoint.sh /app/wait-for-db.sh
 
 # Persistent data volumes
-VOLUME ["/data/postgres", "/data/redis", "/data/downloads"]
+VOLUME ["/data/postgres", "/data/redis", "/data/downloads", "/data/prometheus", "/data/grafana"]
 
-EXPOSE 47100 47200
+EXPOSE 47100 47200 47500 47600
 
 ENTRYPOINT ["/entrypoint.sh"]

@@ -62,6 +62,8 @@ docker run -d `
     --name $ContainerName `
     -p 47100:47100 `
     -p 47200:47200 `
+    -p 47500:47500 `
+    -p 47600:47600 `
     -v torrencloud-pgdata:/data/postgres `
     -v torrencloud-redis:/data/redis `
     -v torrencloud-downloads:/data/downloads `
@@ -75,6 +77,8 @@ Write-Host ""
 Write-Host "  Frontend:           http://localhost:47100"
 Write-Host "  API:                http://localhost:47200/api"
 Write-Host "  Hangfire Dashboard: http://localhost:47200/hangfire"
+Write-Host "  Grafana:            http://localhost:47500"
+Write-Host "  Prometheus:         http://localhost:47600"
 Write-Host ""
 Write-Host "  View logs:  docker logs -f torrencloud"
 Write-Host "  Stop:       docker stop torrencloud"
