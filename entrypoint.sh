@@ -22,7 +22,7 @@ if [ ! -f "$PGDATA/PG_VERSION" ]; then
     # Configure PostgreSQL
     cat >> "$PGDATA/postgresql.conf" <<EOF
 listen_addresses = '127.0.0.1'
-port = 47300
+port = 5432
 max_connections = 200
 shared_buffers = 128MB
 EOF
@@ -36,9 +36,9 @@ EOF
 
     # Start PostgreSQL temporarily to create user and database
     su - postgres -c "/usr/lib/postgresql/15/bin/pg_ctl -D $PGDATA -w start"
-    su - postgres -c "psql -p 47300 -c \"CREATE USER $POSTGRES_USER WITH PASSWORD '$POSTGRES_PASSWORD';\""
-    su - postgres -c "psql -p 47300 -c \"CREATE DATABASE $POSTGRES_DB OWNER $POSTGRES_USER;\""
-    su - postgres -c "psql -p 47300 -c \"GRANT ALL PRIVILEGES ON DATABASE $POSTGRES_DB TO $POSTGRES_USER;\""
+    su - postgres -c "psql -p 5432 -c \"CREATE USER $POSTGRES_USER WITH PASSWORD '$POSTGRES_PASSWORD';\""
+    su - postgres -c "psql -p 5432 -c \"CREATE DATABASE $POSTGRES_DB OWNER $POSTGRES_USER;\""
+    su - postgres -c "psql -p 5432 -c \"GRANT ALL PRIVILEGES ON DATABASE $POSTGRES_DB TO $POSTGRES_USER;\""
     su - postgres -c "/usr/lib/postgresql/15/bin/pg_ctl -D $PGDATA -w stop"
 
     echo "[entrypoint] PostgreSQL initialized successfully."
@@ -57,8 +57,8 @@ chmod 777 /data/downloads
 # -----------------------------------------------------------
 # 3. Export environment variables for .NET services
 # -----------------------------------------------------------
-export ConnectionStrings__DefaultConnection="Host=127.0.0.1;Port=47300;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
-export Redis__ConnectionString="127.0.0.1:47400"
+export ConnectionStrings__DefaultConnection="Host=127.0.0.1;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+export Redis__ConnectionString="127.0.0.1:6379"
 export APPLY_MIGRATIONS="${APPLY_MIGRATIONS:-true}"
 export ASPNETCORE_ENVIRONMENT="${ASPNETCORE_ENVIRONMENT:-Production}"
 export TORRENT_DOWNLOAD_PATH="/data/downloads"
