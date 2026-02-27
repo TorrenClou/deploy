@@ -47,6 +47,9 @@ else
     chown -R postgres:postgres "$PGDATA"
 fi
 
+# Always enforce correct PostgreSQL port (data volume may have stale config)
+sed -i 's/^port = .*/port = 5432/' "$PGDATA/postgresql.conf"
+
 # -----------------------------------------------------------
 # 2. Ensure directory permissions
 # -----------------------------------------------------------
