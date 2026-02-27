@@ -50,6 +50,12 @@ fi
 # Always enforce correct PostgreSQL port (data volume may have stale config)
 sed -i 's/^port = .*/port = 5432/' "$PGDATA/postgresql.conf"
 
+# Sync PostgreSQL credentials with current .env values
+echo "[entrypoint] Syncing PostgreSQL credentials..."
+su - postgres -c "/usr/lib/postgresql/15/bin/pg_ctl -D $PGDATA -w start"
+su - postgres -c "psql -p 5432 -c \"ALTER USER $POSTGRES_USER WITH PASSWORD '$POSTGRES_PASSWORD';\""
+su - postgres -c "/usr/lib/postgresql/15/bin/pg_ctl -D $PGDATA -w stop"
+
 # -----------------------------------------------------------
 # 2. Ensure directory permissions
 # -----------------------------------------------------------
