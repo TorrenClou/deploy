@@ -26,8 +26,19 @@ if [ ! -f "$ENV_FILE" ]; then
     echo -e "${YELLOW}No .env file found. Creating from .env.example...${NC}"
     if [ -f ".env.example" ]; then
         cp .env.example .env
-        echo -e "${RED}Please edit .env and replace all <CHANGE_ME> values, then re-run this script.${NC}"
-        exit 1
+        echo -e "${YELLOW}Generating random secrets for .env...${NC}"
+        
+        DB_PASS=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 24)
+        JWT_SEC=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 48)
+        ADMIN_PASS=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 16)
+        NEXT_SEC=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 48)
+
+        sed -i "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=${DB_PASS}|" .env
+        sed -i "s|^JWT_SECRET=.*|JWT_SECRET=${JWT_SEC}|" .env
+        sed -i "s|^ADMIN_PASSWORD=.*|ADMIN_PASSWORD=${ADMIN_PASS}|" .env
+        sed -i "s|^NEXTAUTH_SECRET=.*|NEXTAUTH_SECRET=${NEXT_SEC}|" .env
+
+        echo -e "${GREEN}.env generated successfully with secure defaults!${NC}"
     else
         echo -e "${RED}Error: .env.example not found. Please create a .env file.${NC}"
         exit 1
@@ -70,6 +81,8 @@ docker run -d \
     -p 47200:47200 \
     -p 47500:47500 \
     -p 47600:47600 \
+    -p 5432:5432 \
+    -p 6379:6379 \
     -v torrencloud-pgdata:/data/postgres \
     -v torrencloud-redis:/data/redis \
     -v torrencloud-downloads:/data/downloads \
