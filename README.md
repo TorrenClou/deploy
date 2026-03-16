@@ -73,21 +73,35 @@ Data is stored in Docker volumes that survive container restarts:
 
 ## Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `POSTGRES_PASSWORD` | Yes | - | PostgreSQL password |
-| `JWT_SECRET` | Yes | - | JWT signing key (min 32 chars) |
-| `NEXTAUTH_SECRET` | Yes | - | NextAuth.js secret |
-| `GOOGLE_CLIENT_ID` | Yes | - | Google OAuth client ID |
-| `ADMIN_EMAIL` | No | `admin@example.com` | Admin login email |
-| `ADMIN_PASSWORD` | Yes | - | Admin login password |
-| `ADMIN_NAME` | No | `Admin` | Admin display name |
-| `NEXTAUTH_URL` | No | `http://localhost:47100` | Public URL of the frontend |
-| `POSTGRES_DB` | No | `torrenclo` | Database name |
-| `POSTGRES_USER` | No | `torrenclo_user` | Database user |
-| `JWT_ISSUER` | No | `TorrenClou_API` | JWT issuer |
-| `JWT_AUDIENCE` | No | `TorrenClou_Client` | JWT audience |
-| `HANGFIRE_WORKER_COUNT` | No | `10` | Background job concurrency |
+### Required Variables
+| Variable | Description |
+|----------|-------------|
+| `POSTGRES_PASSWORD` | PostgreSQL password |
+| `JWT_SECRET` | JWT signing key (min 32 chars) |
+| `NEXTAUTH_SECRET` | NextAuth.js secret for session encryption |
+| `ADMIN_PASSWORD` | Admin account password |
+
+### Important Notes
+
+**Frontend API Discovery:**
+- ✅ **Client-side:** Auto-detected using `window.location` — no configuration needed
+- ✅ **Server-side auth:** Configured via `BACKEND_URL` env var (used for NextAuth login)
+  - **All-in-one container:** `http://127.0.0.1:47200` (default, localhost)
+  - **Docker Compose:** `http://backend:8080` (uses internal Docker network)
+
+### Optional Variables
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NEXTAUTH_URL` | `http://localhost:47100` | Public URL of the frontend (for OAuth redirects) |
+| `POSTGRES_DB` | `torrenclo` | Database name |
+| `POSTGRES_USER` | `torrenclo_user` | Database user |
+| `GOOGLE_CLIENT_ID` | - | Google OAuth client ID |
+| `ADMIN_EMAIL` | `admin@example.com` | Admin login email |
+| `ADMIN_NAME` | `Admin` | Admin display name |
+| `JWT_ISSUER` | `TorrenClou_API` | JWT issuer claim |
+| `JWT_AUDIENCE` | `TorrenClou_Client` | JWT audience claim |
+| `HANGFIRE_WORKER_COUNT` | `10` | Background job concurrency |
+| `BACKEND_URL` | `http://127.0.0.1:47200` | Override backend URL for server-side requests |
 
 See [`.env.example`](.env.example) for the full list including optional observability settings.
 
@@ -107,6 +121,22 @@ docker rm torrencloud
 docker rm torrencloud
 docker volume rm torrencloud-pgdata torrencloud-redis torrencloud-downloads
 ```
+
+## Production Deployment (Separate Services)
+
+For production deployments, use **docker-compose.prod.yml** to run frontend, backend, and workers as separate scalable services:
+
+```bash
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+**Key differences:**
+- Frontend auto-detects backend API using `window.location`
+- Backend URL for server-side auth configured via `BACKEND_URL=http://backend:8080` (internal Docker network)
+- Separate containers allow independent scaling
+- No supervisord — each service managed independently
+
+See [docker-compose.prod.yml](docker-compose.prod.yml) for the full configuration.
 
 ## Updating
 

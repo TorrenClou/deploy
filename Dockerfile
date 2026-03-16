@@ -13,11 +13,9 @@ RUN yarn install --frozen-lockfile
 
 COPY frontend/ ./
 
-# NEXT_PUBLIC_ vars are baked at build time
-ARG NEXT_PUBLIC_API_URL=http://localhost:47200/api
-ARG NEXT_PUBLIC_BACKEND_URL=http://localhost:47200
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
+# NOTE: API URL is NOW auto-detected at runtime using window.location
+# No need to bake in NEXT_PUBLIC_API_URL at build time!
+# This allows the same image to work with any deployment server.
 
 RUN npm run build
 

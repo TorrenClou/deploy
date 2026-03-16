@@ -1,0 +1,116 @@
+# ============================================================
+# TorrenCloud Docker Compose (Production - Separate Services)
+# ============================================================
+# This setup runs frontend, backend, and workers as separate containers
+# with proper networking. Use this for production deployments.
+#
+# Usage:
+#   docker-compose -f docker-compose.prod.yml up -d
+#
+# Note: Requires .env file with proper configuration
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: torrenclo_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-torrenclo}
+      POSTGRES_USER: ${POSTGRES_USER:-torrenclo_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-torrenclo_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis Cache & Job Queue
+  redis:
+    image: redis:7-alpine
+    container_name: torrenclo_redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Backend API (.NET)
+  backend:
+    build:
+      context: ..
+      dockerfile: TorrenClouBackend/TorreClou.API/Dockerfile
+    container_name: torrenclo_backend
+    ports:
+      - "${API_PORT:-5000}:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${POSTGRES_DB:-torrenclo};Username=${POSTGRES_USER:-torrenclo_user};Password=${POSTGRES_PASSWORD:-changeme}
+      - Redis__ConnectionString=redis:6379
+      - Jwt__Key=${JWT_SECRET}
+      - Jwt__Issuer=${JWT_ISSUER:-TorrenClou_API}
+      - Jwt__Audience=${JWT_AUDIENCE:-TorrenClou_Client}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - APPLY_MIGRATIONS=${APPLY_MIGRATIONS:-true}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - downloads:/app/downloads
+    restart: unless-stopped
+
+  # Frontend (Next.js)
+  # Note: Frontend will auto-detect backend URL using window.location
+  # BACKEND_URL is for server-side auth requests (internal Docker network)
+  frontend:
+    build:
+      context: ../TorrenClouFrontend
+      dockerfile: Dockerfile
+    container_name: torrenclo_frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-change-me-in-production}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - BACKEND_URL=http://backend:8080
+      - AUTH_TRUST_HOST=true
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # Torrent Download Worker
+  torrent-worker:
+    build:
+      context: ..
+      dockerfile: TorrenClouBackend/TorreClou.Worker/Dockerfile
+    container_name: torrenclo_torrent_worker
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${POSTGRES_DB:-torrenclo};Username=${POSTGRES_USER:-torrenclo_user};Password=${POSTGRES_PASSWORD:-changeme}
+      - Redis__ConnectionString=redis:6379
+      - TORRENT_DOWNLOAD_PATH=/app/downloads
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - downloads:/app/downloads
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  downloads:

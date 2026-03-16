@@ -91,8 +91,11 @@ export ADMIN_NAME="${ADMIN_NAME:-Admin}"
 export FRONTEND_URL="http://localhost:47100"
 
 # Next.js server-side runtime vars
-export BACKEND_URL="http://127.0.0.1:47200"
+# BACKEND_URL: used for server-side auth requests within the container
+# If running in all-in-one container, use localhost; if in docker-compose, can be overridden
+export BACKEND_URL="${BACKEND_URL:-http://127.0.0.1:47200}"
 export NEXTAUTH_SECRET="${NEXTAUTH_SECRET:-change-me-in-production}"
+# NEXTAUTH_URL: Must match the frontend's public URL for callback authentication
 export NEXTAUTH_URL="${NEXTAUTH_URL:-http://localhost:47100}"
 export AUTH_TRUST_HOST=true
 
