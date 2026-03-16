@@ -84,9 +84,16 @@ Data is stored in Docker volumes that survive container restarts:
 ### Important Notes
 
 **Frontend API Discovery:**
-- ✅ **Client-side:** Auto-detected using `window.location` — no configuration needed
-- ✅ **Server-side auth:** Configured via `BACKEND_URL` env var (used for NextAuth login)
-  - **All-in-one container:** `http://127.0.0.1:47200` (default, localhost)
+
+**Client-side requests** (browser → backend):
+- If `NEXT_PUBLIC_API_URL` is set: Uses that URL explicitly
+- If `NEXT_PUBLIC_API_PORT` is set: Constructs URL as `http://hostname:$NEXT_PUBLIC_API_PORT/api`
+  - Works great for Docker Compose: frontend :3000 + backend :5000 → queries :5000/api ✅
+- Fallback: `http://localhost:47200/api` (for local development)
+
+**Server-side requests** (NextAuth login):
+- Configured via `BACKEND_URL` env var (required for server-side auth)
+  - **All-in-one container:** `http://127.0.0.1:47200` (default, internal localhost)
   - **Docker Compose:** `http://backend:8080` (uses internal Docker network)
 
 ### Optional Variables
