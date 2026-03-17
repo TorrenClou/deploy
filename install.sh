@@ -109,6 +109,40 @@ else
     success "Configuration generated with secure random secrets"
 fi
 
+# ─── Detect Server IP & Build sslip.io URLs ──────────────
+info "Detecting server IP address..."
+
+SERVER_IP=""
+# Try hostname -I (Linux)
+SERVER_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || true)
+# Fallback: ip route
+[ -z "$SERVER_IP" ] && SERVER_IP=$(ip route get 1 2>/dev/null | awk '/src/{print $7}' | head -1 || true)
+# Fallback: curl public IP
+[ -z "$SERVER_IP" ] && SERVER_IP=$(curl -sf --max-time 3 https://api.ipify.org 2>/dev/null || true)
+
+if [ -n "$SERVER_IP" ]; then
+    SSLIP_HOST=$(echo "$SERVER_IP" | tr '.' '-')
+    FRONTEND_PUBLIC="http://${SSLIP_HOST}.sslip.io:47100"
+    BACKEND_PUBLIC="http://${SSLIP_HOST}.sslip.io:47200"
+    GRAFANA_PUBLIC="http://${SSLIP_HOST}.sslip.io:47500"
+    PROMETHEUS_PUBLIC="http://${SSLIP_HOST}.sslip.io:47600"
+    GDRIVE_REDIRECT="${FRONTEND_PUBLIC}/proxy/api/storage/gdrive/callback"
+    success "Server IP: ${SERVER_IP} → sslip.io URLs ready"
+
+    # Write public URL into .env so NEXTAUTH_URL and FRONTEND_URL use the real address
+    sedi "s|NEXTAUTH_URL=.*|NEXTAUTH_URL=${FRONTEND_PUBLIC}|" .env
+    sedi "s|PUBLIC_FRONTEND_URL=.*|PUBLIC_FRONTEND_URL=${FRONTEND_PUBLIC}|" .env 2>/dev/null || true
+    # Add PUBLIC_FRONTEND_URL if not present
+    grep -q "^PUBLIC_FRONTEND_URL=" .env 2>/dev/null || echo "PUBLIC_FRONTEND_URL=${FRONTEND_PUBLIC}" >> .env
+else
+    warn "Could not detect server IP — defaulting to localhost URLs"
+    FRONTEND_PUBLIC="http://localhost:47100"
+    BACKEND_PUBLIC="http://localhost:47200"
+    GRAFANA_PUBLIC="http://localhost:47500"
+    PROMETHEUS_PUBLIC="http://localhost:47600"
+    GDRIVE_REDIRECT="${FRONTEND_PUBLIC}/proxy/api/storage/gdrive/callback"
+fi
+
 # ─── Stop Existing Container ─────────────────────────────
 if docker ps -aq -f "name=${CONTAINER_NAME}" | grep -q .; then
     info "Stopping existing container..."
@@ -168,22 +202,27 @@ echo -e "${GREEN}${BOLD}  ══════════════════
 echo -e "${GREEN}${BOLD}    ✓ TorrenCloud is ready!${NC}"
 echo -e "${GREEN}${BOLD}  ══════════════════════════════════════════════${NC}"
 echo ""
-echo -e "  ${BOLD}── Services ──${NC}"
-echo -e "  Frontend        ${CYAN}http://localhost:47100${NC}"
-echo -e "  API             ${CYAN}http://localhost:47200/api${NC}"
-echo -e "  Hangfire        ${CYAN}http://localhost:47200/hangfire${NC}"
+echo -e "  ${BOLD}── Services (Network / sslip.io) ──${NC}"
+echo -e "  Frontend        ${CYAN}${FRONTEND_PUBLIC}${NC}"
+echo -e "  API             ${CYAN}${BACKEND_PUBLIC}/api${NC}"
+echo -e "  Hangfire        ${CYAN}${BACKEND_PUBLIC}/hangfire${NC}"
+echo -e "  Grafana         ${CYAN}${GRAFANA_PUBLIC}${NC}     ${DIM}(admin / admin)${NC}"
+echo -e "  Prometheus      ${CYAN}${PROMETHEUS_PUBLIC}${NC}"
+echo ""
+echo -e "  ${BOLD}── Services (Localhost) ──${NC}"
+echo -e "  Frontend        ${DIM}http://localhost:47100${NC}"
+echo -e "  API             ${DIM}http://localhost:47200/api${NC}"
 echo ""
 echo -e "  ${BOLD}── Login ──${NC}"
 echo -e "  Email           ${YELLOW}${ADMIN_EMAIL}${NC}"
 echo -e "  Password        ${YELLOW}${ADMIN_PASSWORD}${NC}"
 echo ""
-echo -e "  ${BOLD}── Monitoring ──${NC}"
-echo -e "  Grafana         ${CYAN}http://localhost:47500${NC}     ${DIM}(admin / admin)${NC}"
-echo -e "  Prometheus      ${CYAN}http://localhost:47600${NC}"
+echo -e "  ${BOLD}── Google Drive OAuth ──${NC}"
+echo -e "  Register this redirect URI in Google Cloud Console:"
+echo -e "  ${YELLOW}${GDRIVE_REDIRECT}${NC}"
 echo ""
 echo -e "${GREEN}${BOLD}  ══════════════════════════════════════════════${NC}"
 echo -e "  ${DIM}Config: $(pwd)/.env${NC}"
-echo -e "  ${DIM}Change credentials and restart:${NC}"
-echo -e "  ${DIM}  docker restart torrencloud${NC}"
+echo -e "  ${DIM}Restart: docker restart torrencloud${NC}"
 echo -e "${GREEN}${BOLD}  ══════════════════════════════════════════════${NC}"
 echo ""

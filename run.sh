@@ -60,6 +60,34 @@ if [ "$MISSING" -eq 1 ]; then
     exit 1
 fi
 
+# Detect server IP and build sslip.io URLs
+SERVER_IP=""
+SERVER_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || true)
+[ -z "$SERVER_IP" ] && SERVER_IP=$(ip route get 1 2>/dev/null | awk '/src/{print $7}' | head -1 || true)
+[ -z "$SERVER_IP" ] && SERVER_IP=$(curl -sf --max-time 3 https://api.ipify.org 2>/dev/null || true)
+
+if [ -n "$SERVER_IP" ]; then
+    SSLIP_HOST=$(echo "$SERVER_IP" | tr '.' '-')
+    FRONTEND_PUBLIC="http://${SSLIP_HOST}.sslip.io:47100"
+    BACKEND_PUBLIC="http://${SSLIP_HOST}.sslip.io:47200"
+    GRAFANA_PUBLIC="http://${SSLIP_HOST}.sslip.io:47500"
+    PROMETHEUS_PUBLIC="http://${SSLIP_HOST}.sslip.io:47600"
+    GDRIVE_REDIRECT="${FRONTEND_PUBLIC}/proxy/api/storage/gdrive/callback"
+
+    # Update .env with real public URLs for NextAuth and CORS
+    sed -i "s|NEXTAUTH_URL=.*|NEXTAUTH_URL=${FRONTEND_PUBLIC}|" "$ENV_FILE" 2>/dev/null || true
+    grep -q "^PUBLIC_FRONTEND_URL=" "$ENV_FILE" 2>/dev/null \
+        && sed -i "s|PUBLIC_FRONTEND_URL=.*|PUBLIC_FRONTEND_URL=${FRONTEND_PUBLIC}|" "$ENV_FILE" \
+        || echo "PUBLIC_FRONTEND_URL=${FRONTEND_PUBLIC}" >> "$ENV_FILE"
+else
+    FRONTEND_PUBLIC="http://localhost:47100"
+    BACKEND_PUBLIC="http://localhost:47200"
+    GRAFANA_PUBLIC="http://localhost:47500"
+    PROMETHEUS_PUBLIC="http://localhost:47600"
+    GDRIVE_REDIRECT="${FRONTEND_PUBLIC}/proxy/api/storage/gdrive/callback"
+    echo -e "${YELLOW}Warning: Could not detect server IP — using localhost URLs${NC}"
+fi
+
 # Stop existing container if running
 if docker ps -q -f name="$CONTAINER_NAME" | grep -q .; then
     echo -e "${YELLOW}Stopping existing container...${NC}"
@@ -93,11 +121,20 @@ docker run -d \
 echo ""
 echo -e "${GREEN}TorrentClou is starting up!${NC}"
 echo ""
+echo -e "  ${GREEN}── Network URLs (sslip.io) ──${NC}"
+echo "  Frontend:           ${FRONTEND_PUBLIC}"
+echo "  API:                ${BACKEND_PUBLIC}/api"
+echo "  Hangfire Dashboard: ${BACKEND_PUBLIC}/hangfire"
+echo "  Grafana:            ${GRAFANA_PUBLIC}"
+echo "  Prometheus:         ${PROMETHEUS_PUBLIC}"
+echo ""
+echo -e "  ${GREEN}── Localhost URLs ──${NC}"
 echo "  Frontend:           http://localhost:47100"
 echo "  API:                http://localhost:47200/api"
-echo "  Hangfire Dashboard: http://localhost:47200/hangfire"
-echo "  Grafana:            http://localhost:47500"
-echo "  Prometheus:         http://localhost:47600"
+echo ""
+echo -e "  ${YELLOW}── Google Drive OAuth ──${NC}"
+echo "  Register this Redirect URI in Google Cloud Console:"
+echo "  ${GDRIVE_REDIRECT}"
 echo ""
 echo "  View logs:  docker logs -f torrencloud"
 echo "  Stop:       docker stop torrencloud"

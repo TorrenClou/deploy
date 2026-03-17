@@ -88,15 +88,15 @@ export ADMIN_PASSWORD="${ADMIN_PASSWORD:-changeme}"
 export ADMIN_NAME="${ADMIN_NAME:-Admin}"
 
 # Frontend URL (for CORS)
-export FRONTEND_URL="http://localhost:47100"
+# PUBLIC_FRONTEND_URL is set by run.sh/install.sh to the sslip.io URL before container starts
+# Falls back to localhost if not set (local-only access)
+export FRONTEND_URL="${PUBLIC_FRONTEND_URL:-http://localhost:47100}"
 
 # Next.js server-side runtime vars
-# BACKEND_URL: used for server-side auth requests within the container
-# If running in all-in-one container, use localhost; if in docker-compose, can be overridden
 export BACKEND_URL="${BACKEND_URL:-http://127.0.0.1:47200}"
 export NEXTAUTH_SECRET="${NEXTAUTH_SECRET:-change-me-in-production}"
-# NEXTAUTH_URL: Must match the frontend's public URL for callback authentication
-export NEXTAUTH_URL="${NEXTAUTH_URL:-http://localhost:47100}"
+# NEXTAUTH_URL: run.sh/install.sh writes the sslip.io URL into .env before container starts
+export NEXTAUTH_URL="${NEXTAUTH_URL:-${FRONTEND_URL}}"
 export AUTH_TRUST_HOST=true
 
 # Observability (optional)
@@ -112,7 +112,9 @@ export Observability__EnableTracing="${OBSERVABILITY_ENABLE_TRACING:-true}"
 export GF_SECURITY_ADMIN_USER="${GRAFANA_ADMIN_USER:-admin}"
 export GF_SECURITY_ADMIN_PASSWORD="${GRAFANA_ADMIN_PASSWORD:-admin}"
 export GF_SERVER_HTTP_PORT=47500
-export GF_SERVER_ROOT_URL="http://localhost:47500"
+# Use public sslip.io URL if available, otherwise localhost
+_GRAFANA_BASE=$(echo "${PUBLIC_FRONTEND_URL:-http://localhost}" | sed 's|:[0-9]*$||')
+export GF_SERVER_ROOT_URL="${_GRAFANA_BASE}:47500"
 
 # .NET Runtime settings
 export DOTNET_gcServer=1
