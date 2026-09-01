@@ -121,14 +121,11 @@ Building TorrentClou reinforced a few lessons:
 TorrentClou is open source and available on GitHub. Running it takes one command:
 
 ```bash
-git clone https://github.com/TorrenClou/deploy.git
-cd deploy
-cp .env.example .env
-# Edit .env with your secrets
-./run.sh
+curl -fsSL https://raw.githubusercontent.com/TorrenClou/deploy/main/install.sh | bash
 ```
 
-Frontend at `http://localhost:47100`. API at `http://localhost:47200/api`.
+No `.env` to edit — the container generates its own secrets and everything else is set up
+in the browser. Frontend at `http://localhost:47100`, API at `http://localhost:47200/api`.
 
 ---
 
