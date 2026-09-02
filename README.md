@@ -1,4 +1,4 @@
-# TorrenCloud
+# TorrenClou
 
 Self-hosted torrent-to-cloud. Point it at a `.torrent`, pick the files you want, and it
 downloads them on your server and uploads them straight to Google Drive or any
@@ -8,15 +8,19 @@ One container. No configuration files.
 
 ## Install
 
+<!-- snippet:install-linux -->
 ```bash
 curl -fsSL https://raw.githubusercontent.com/TorrenClou/deploy/main/install.sh | bash
 ```
+<!-- /snippet -->
 
 Windows (PowerShell):
 
+<!-- snippet:install-windows -->
 ```powershell
 irm https://raw.githubusercontent.com/TorrenClou/deploy/main/install.ps1 | iex
 ```
+<!-- /snippet -->
 
 Then open the URL it prints and create your account.
 
@@ -63,9 +67,8 @@ In the app, under **Settings** — transfer concurrency, upload failover, what h
 local files after an upload, and disk cleanup.
 
 Environment variables exist only for the cases the app cannot work out for itself: an
-external database, a reverse proxy that rewrites the host, or shipping logs off-box. See
-[`.env.example`](.env.example), or the
-[Configuration](https://github.com/TorrenClou/deploy/wiki/Configuration) wiki page.
+external database, a reverse proxy that rewrites the host, or shipping logs off-box.
+See [Configuration](https://tc.gitnasr.com/docs/configuration).
 
 > Your data lives in three Docker volumes: `torrencloud-pgdata`, `torrencloud-redis` and
 > `torrencloud-downloads`. `torrencloud-pgdata` also holds the generated secrets — delete
@@ -73,26 +76,27 @@ external database, a reverse proxy that rewrites the host, or shipping logs off-
 
 ## Documentation
 
-Everything else is in the [wiki](https://github.com/TorrenClou/deploy/wiki):
+Full documentation is at **[tc.gitnasr.com/docs](https://tc.gitnasr.com/docs)**.
 
-- [Installation](https://github.com/TorrenClou/deploy/wiki/Installation) — manual `docker run`, custom domains, reverse proxies
-- [First-run setup](https://github.com/TorrenClou/deploy/wiki/First-Run-Setup) — Google Drive and S3 walkthroughs
-- [Configuration](https://github.com/TorrenClou/deploy/wiki/Configuration) — every setting, and the environment overrides
-- [Updating](https://github.com/TorrenClou/deploy/wiki/Updating) — upgrades, backups, rollbacks
-- [Architecture](https://github.com/TorrenClou/deploy/wiki/Architecture) — what runs inside the container
-- [Security](https://github.com/TorrenClou/deploy/wiki/Security) — where secrets live, what to put behind a proxy
-- [Troubleshooting](https://github.com/TorrenClou/deploy/wiki/Troubleshooting)
+- [Getting started](https://tc.gitnasr.com/docs/getting-started) — install, first run, creating your account
+- [Usage guide](https://tc.gitnasr.com/docs/usage) — adding torrents, picking files, watching transfers
+- [Configuration](https://tc.gitnasr.com/docs/configuration) — every setting and environment override
+- [Google Drive](https://tc.gitnasr.com/docs/providers/google-drive) and [S3](https://tc.gitnasr.com/docs/providers/s3) — connecting storage
+- [Monitoring](https://tc.gitnasr.com/docs/grafana) — the bundled Grafana dashboards
+- [FAQ](https://tc.gitnasr.com/docs/faq)
 
 ## Repositories
 
 | Repository | Contents |
 |------------|----------|
 | [backend](https://github.com/TorrenClou/backend) | .NET 9 API and workers |
-| [frontend](https://github.com/TorrenClou/frontend) | Next.js 15 web app |
+| [frontend](https://github.com/TorrenClou/frontend) | Next.js web app |
+| [website](https://github.com/TorrenClou/website) | Documentation site — the canonical docs live here |
 | [deploy](https://github.com/TorrenClou/deploy) | Dockerfile, installer, CI — this repo |
 
-Contributions welcome: see [CONTRIBUTING.md](CONTRIBUTING.md).
+Contributions welcome: see
+[CONTRIBUTING.md](https://github.com/TorrenClou/deploy/blob/main/CONTRIBUTING.md).
 
 ## License
 
-Proprietary. All rights reserved.
+MIT — see [LICENSE](https://github.com/TorrenClou/deploy/blob/main/LICENSE).

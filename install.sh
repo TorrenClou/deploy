@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# TorrenCloud installer.
+# TorrenClou installer.
 #
 #   curl -fsSL https://raw.githubusercontent.com/TorrenClou/deploy/main/install.sh | bash
 #
@@ -24,7 +24,7 @@ fail()    { echo -e "${RED}  ✗ $1${NC}"; exit 1; }
 echo ""
 echo -e "${CYAN}${BOLD}"
 echo "  ╔════════════════════════════════════════╗"
-echo "  ║         TorrenCloud Installer          ║"
+echo "  ║         TorrenClou Installer          ║"
 echo "  ╚════════════════════════════════════════╝"
 echo -e "${NC}"
 
@@ -51,7 +51,7 @@ fi
 info "Pulling ${IMAGE}..."
 docker pull "$IMAGE"
 
-info "Starting TorrenCloud..."
+info "Starting TorrenClou..."
 docker run -d \
     --name "$CONTAINER_NAME" \
     --restart unless-stopped \
@@ -102,7 +102,7 @@ fi
 
 echo ""
 echo -e "${GREEN}${BOLD}  ══════════════════════════════════════════════${NC}"
-echo -e "${GREEN}${BOLD}    ✓ TorrenCloud is running${NC}"
+echo -e "${GREEN}${BOLD}    ✓ TorrenClou is running${NC}"
 echo -e "${GREEN}${BOLD}  ══════════════════════════════════════════════${NC}"
 echo ""
 echo -e "  ${BOLD}Open this and create your account:${NC}"
@@ -114,5 +114,5 @@ echo -e "  ${DIM}Grafana's password: docker exec ${CONTAINER_NAME} cat /data/pos
 echo ""
 echo -e "  ${DIM}Logs:    docker logs -f ${CONTAINER_NAME}${NC}"
 echo -e "  ${DIM}Restart: docker restart ${CONTAINER_NAME}${NC}"
-echo -e "  ${DIM}Docs:    https://github.com/TorrenClou/deploy/wiki${NC}"
+echo -e "  ${DIM}Docs:    https://tc.gitnasr.com/docs${NC}"
 echo ""

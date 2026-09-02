@@ -1,4 +1,4 @@
-# TorrenCloud installer for Windows.
+# TorrenClou installer for Windows.
 #
 #   irm https://raw.githubusercontent.com/TorrenClou/deploy/main/install.ps1 | iex
 #
@@ -18,7 +18,7 @@ function Write-Fail    { param($m) Write-Host "  x $m" -ForegroundColor Red; exi
 
 Write-Host ""
 Write-Host "  ==========================================" -ForegroundColor Cyan
-Write-Host "           TorrenCloud Installer" -ForegroundColor Cyan
+Write-Host "           TorrenClou Installer" -ForegroundColor Cyan
 Write-Host "  ==========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -49,7 +49,7 @@ Write-Info "Pulling $Image..."
 docker pull $Image
 if ($LASTEXITCODE -ne 0) { Write-Fail "Could not pull the image." }
 
-Write-Info "Starting TorrenCloud..."
+Write-Info "Starting TorrenClou..."
 docker run -d `
     --name $ContainerName `
     --restart unless-stopped `
@@ -92,7 +92,7 @@ if ($healthy) {
 # --- Print where to go ----------------------------------------------
 Write-Host ""
 Write-Host "  ==========================================" -ForegroundColor Green
-Write-Host "    TorrenCloud is running" -ForegroundColor Green
+Write-Host "    TorrenClou is running" -ForegroundColor Green
 Write-Host "  ==========================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "  Open this and create your account:"
@@ -103,5 +103,5 @@ Write-Host "  Grafana's password: docker exec $ContainerName cat /data/postgres/
 Write-Host ""
 Write-Host "  Logs:    docker logs -f $ContainerName" -ForegroundColor DarkGray
 Write-Host "  Restart: docker restart $ContainerName" -ForegroundColor DarkGray
-Write-Host "  Docs:    https://github.com/TorrenClou/deploy/wiki" -ForegroundColor DarkGray
+Write-Host "  Docs:    https://tc.gitnasr.com/docs" -ForegroundColor DarkGray
 Write-Host ""

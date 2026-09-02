@@ -85,7 +85,7 @@ docker build -t torrencloud-test .
 
 Merging to `main` in any of the three repos triggers the deploy repo to build and push the
 combined image. Details are on the
-[Architecture](https://github.com/TorrenClou/deploy/wiki/Architecture) wiki page.
+[Architecture](https://tc.gitnasr.com/docs) wiki page.
 
 Use pull requests rather than pushing to `main` directly.
 
