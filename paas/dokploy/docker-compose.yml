@@ -1,0 +1,41 @@
+# TorrenClou on Dokploy.
+#
+# Dokploy fronts services with Traefik, so nothing is published on the host and
+# the domain is attached in Dokploy's UI rather than declared here.
+#
+# Create a Compose service, point it at this file, then add a domain in Dokploy
+# targeting port 47100.
+
+services:
+  torrenclou:
+    image: ghcr.io/torrenclou/torrentclou:${TORRENCLOU_VERSION:-latest}
+    restart: unless-stopped
+
+    # No ports block. Traefik routes to the container on the internal network;
+    # publishing 47200 here would expose the unauthenticated Hangfire dashboard
+    # to the host.
+    expose:
+      - "47100"
+
+    environment:
+      # Only needed if Traefik is not forwarding the original host — normally it
+      # is, and the app derives its own address from the request.
+      PUBLIC_FRONTEND_URL: ${PUBLIC_FRONTEND_URL:-}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-}
+
+    volumes:
+      - torrencloud-pgdata:/data/postgres
+      - torrencloud-redis:/data/redis
+      - torrencloud-downloads:/data/downloads
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:47200/api/health/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+volumes:
+  torrencloud-pgdata:
+  torrencloud-redis:
+  torrencloud-downloads:

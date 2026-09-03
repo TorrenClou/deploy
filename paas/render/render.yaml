@@ -1,0 +1,55 @@
+# Render Blueprint for TorrenClou.
+#
+# Deploy: https://render.com/deploy?repo=https://github.com/TorrenClou/deploy
+#
+# This uses the all-in-one image with a persistent disk, not separate services.
+# That is a deliberate reversal of the obvious design, for a reason worth
+# writing down:
+#
+#   A Render disk attaches to exactly one service. The torrent worker writes
+#   finished downloads to /data/downloads and the Drive and S3 workers read them
+#   back to upload them. Split across services, the upload workers cannot see
+#   the files the torrent worker produced, so every upload fails. There is no
+#   shared-filesystem option on Render to fix it with.
+#
+#   Mounting one disk at /data on the all-in-one image solves it, and persists
+#   the database, Redis and the generated secrets at the same time. The usual
+#   objection to the all-in-one on a PaaS — that the filesystem is ephemeral and
+#   the database dies on redeploy — does not apply once there is a disk.
+#
+# The cost is a larger instance: nine processes, so `standard` rather than
+# `starter`. A 512MB plan will be killed on first boot.
+
+services:
+  - type: web
+    name: torrenclou
+    runtime: image
+    image:
+      url: ghcr.io/torrenclou/torrentclou:latest
+    # Nine processes plus PostgreSQL. Do not lower this without testing.
+    plan: standard
+    healthCheckPath: /api/health/ready
+    # Only one instance may hold the disk, and the embedded PostgreSQL must not
+    # be run twice against the same data directory.
+    numInstances: 1
+    envVars:
+      # The frontend serves on 47100 inside the container; Render routes to
+      # whatever PORT it sets, so point its proxy at the internal API.
+      - key: BACKEND_URL
+        value: http://127.0.0.1:47200
+      - key: PUBLIC_FRONTEND_URL
+        fromService:
+          name: torrenclou
+          type: web
+          property: host
+      - key: NEXTAUTH_URL
+        fromService:
+          name: torrenclou
+          type: web
+          property: host
+    disk:
+      name: torrenclou-data
+      # Everything that must survive a deploy lives under /data: the database,
+      # Redis, the downloads, and the secrets generated on first boot.
+      mountPath: /data
+      sizeGB: 20
