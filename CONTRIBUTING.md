@@ -83,24 +83,20 @@ docker build -t torrencloud-test .
 
 ## Build & Release Process
 
-Merging to `main` in **any** of the three repos triggers an automated build:
+Merging to `main` in any of the three repos triggers the deploy repo to build and push the
+combined image. Details are on the
+[Architecture](https://tc.gitnasr.com/docs) wiki page.
 
-```
-Backend merge to main  ──┐
-                          ├──> deploy repo builds combined image
-Frontend merge to main ──┘     and pushes to ghcr.io/torrenclou/torrentclou
-```
-
-- Direct pushes to `main` are discouraged; use pull requests
-- All PRs should be reviewed before merging
-- The deploy repo workflow can also be triggered manually via `workflow_dispatch`
+Use pull requests rather than pushing to `main` directly.
 
 ## Code Style
 
 ### Backend (.NET)
 - Follow existing Clean Architecture patterns
 - Use async/await consistently
-- Environment variables via `IConfiguration` (no hardcoded values)
+- Configuration a user should be able to change belongs in `SystemSettings` or
+  `UserSettings`, not in an environment variable. The environment is for things the app
+  cannot discover itself: connection strings, and overrides for unusual deployments.
 
 ### Frontend (Next.js)
 - TypeScript strict mode
@@ -111,7 +107,9 @@ Frontend merge to main ──┘     and pushes to ghcr.io/torrenclou/torrentclo
 ### Deploy Repo
 - Shell scripts must be POSIX-compatible where possible
 - Dockerfile instructions should be ordered for optimal layer caching
-- All environment variables must have defaults in `entrypoint.sh`
+- Every environment variable must have a default in `entrypoint.sh`. `docker run` with
+  no `--env-file` and no `-e` flags has to produce a working install — that is the
+  property the installer depends on, so a change that breaks it is a bug.
 
 ## Questions?
 

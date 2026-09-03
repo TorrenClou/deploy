@@ -1,2 +1,10 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Shell scripts and the Dockerfile must keep LF regardless of platform.
+# A CRLF checkout on Windows makes the shebang `#!/bin/bash\r`, and the
+# container then dies at boot with "exec /entrypoint.sh: no such file or
+# directory" — which names the file it just failed to run, so it is a
+# genuinely confusing hour to lose.
+*.sh        text eol=lf
+Dockerfile  text eol=lf

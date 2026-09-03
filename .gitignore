@@ -1,0 +1,8 @@
+.env
+.env.local
+
+# Local build context. The Dockerfile reads backend/ and frontend/, which CI
+# checks out from the source repositories. Cloning them here for a local
+# `docker build` is expected — committing them is not.
+/backend/
+/frontend/

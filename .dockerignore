@@ -4,3 +4,19 @@
 LICENSE
 .env
 .env.*
+
+# Local build context only: these are cloned in for a manual `docker build` and
+# would otherwise ship gigabytes of build output into the context.
+backend/**/bin
+backend/**/obj
+frontend/node_modules
+frontend/.next
+**/.git
+
+# A developer's local env file must never reach the build. Next.js reads
+# .env.local at build time and bakes the /proxy rewrite destination into the
+# standalone output, so a stale BACKEND_URL here produces an image that talks to
+# someone's laptop.
+frontend/.env.local
+frontend/.env*.local
+backend/.env

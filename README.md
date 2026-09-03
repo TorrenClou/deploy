@@ -1,177 +1,102 @@
-# TorrentClou
+# TorrenClou
 
-**Self-hosted torrent management platform — download, organize, and sync torrents to Google Drive or S3.**
+Self-hosted torrent-to-cloud. Point it at a `.torrent`, pick the files you want, and it
+downloads them on your server and uploads them straight to Google Drive or any
+S3-compatible storage.
 
-One Docker image. One command. Everything included.
+One container. No configuration files.
 
-## Quick Start
+## Install
 
-**Prerequisites:** [Docker](https://docs.docker.com/get-docker/) installed on your machine.
-
-### 1. Clone and configure
-
+<!-- snippet:install-linux -->
 ```bash
-git clone https://github.com/TorrenClou/deploy.git
-cd deploy
-cp .env.example .env
+curl -fsSL https://raw.githubusercontent.com/TorrenClou/deploy/main/install.sh | bash
 ```
+<!-- /snippet -->
 
-Edit `.env` and replace all `<CHANGE_ME>` values with your own secrets.
+Windows (PowerShell):
 
-### 2. Run
-
-**Linux / macOS:**
-```bash
-./run.sh
-```
-
-**Windows (PowerShell):**
+<!-- snippet:install-windows -->
 ```powershell
-.\run.ps1
+irm https://raw.githubusercontent.com/TorrenClou/deploy/main/install.ps1 | iex
 ```
+<!-- /snippet -->
 
-**Or run directly:**
-```bash
-docker run -d --name torrencloud -p 47100:47100 -p 47200:47200 -v torrencloud-pgdata:/data/postgres -v torrencloud-redis:/data/redis -v torrencloud-downloads:/data/downloads --env-file .env ghcr.io/torrenclou/torrentclou:latest
-```
+Then open the URL it prints and create your account.
 
-### 3. Open
+Requires Docker. Nothing else — no `.env` to edit, no secrets to generate. The container
+creates its own on first boot and keeps them on its data volume.
 
-| Service | URL |
-|---------|-----|
-| Frontend | http://localhost:47100 |
-| API | http://localhost:47200/api |
-| API Health | http://localhost:47200/api/health/ready |
-| Hangfire Dashboard | http://localhost:47200/hangfire |
+## What happens on first run
 
----
+1. The container generates its database password, signing keys and session secret.
+2. You open the app and it shows a setup wizard.
+3. You create the admin account — this is the only account, and there is no password
+   reset, so keep it somewhere safe.
+4. You connect Google Drive or S3. Both use your own credentials; nothing is proxied
+   through a third party.
+5. That is it. Everything else has a working default and lives in **Settings**.
 
-## What's Inside
+## Services
 
-The all-in-one image bundles everything needed to run TorrentClou:
+| Service | Port | What it is |
+|---------|------|------------|
+| App | 47100 | The web interface |
+| API | 47200 | REST API, and `/hangfire` for the job dashboard |
+| Grafana | 47500 | Dashboards. Password is in `/data/postgres/secrets.env` |
+| Prometheus | 47600 | Metrics |
 
-| Component | Technology |
-|-----------|------------|
-| Frontend | Next.js 15 (React 18, TypeScript, Tailwind CSS) |
-| Backend API | .NET 9.0 (Clean Architecture) |
-| Torrent Worker | Background job processor for torrent downloads |
-| Google Drive Worker | Syncs completed downloads to Google Drive |
-| S3 Worker | Uploads completed downloads to S3-compatible storage |
-| Database | PostgreSQL 15 |
-| Cache & Jobs | Redis 7 |
-| Process Manager | supervisord |
+Only 47100 needs to be reachable for normal use.
 
-## Data Persistence
-
-Data is stored in Docker volumes that survive container restarts:
-
-| Volume | Container Path | Purpose |
-|--------|---------------|---------|
-| `torrencloud-pgdata` | `/data/postgres` | PostgreSQL database |
-| `torrencloud-redis` | `/data/redis` | Redis data |
-| `torrencloud-downloads` | `/data/downloads` | Downloaded torrent files |
-
-## Environment Variables
-
-### Required Variables
-| Variable | Description |
-|----------|-------------|
-| `POSTGRES_PASSWORD` | PostgreSQL password |
-| `JWT_SECRET` | JWT signing key (min 32 chars) |
-| `NEXTAUTH_SECRET` | NextAuth.js secret for session encryption |
-| `ADMIN_PASSWORD` | Admin account password |
-
-### Important Notes
-
-**Frontend API Discovery:**
-
-**Client-side requests** (browser → backend):
-- If `NEXT_PUBLIC_API_URL` is set: Uses that URL explicitly
-- If `NEXT_PUBLIC_API_PORT` is set: Constructs URL as `http://hostname:$NEXT_PUBLIC_API_PORT/api`
-  - Works great for Docker Compose: frontend :3000 + backend :5000 → queries :5000/api ✅
-- Fallback: `http://localhost:47200/api` (for local development)
-
-**Server-side requests** (NextAuth login):
-- Configured via `BACKEND_URL` env var (required for server-side auth)
-  - **All-in-one container:** `http://127.0.0.1:47200` (default, internal localhost)
-  - **Docker Compose:** `http://backend:8080` (uses internal Docker network)
-
-### Optional Variables
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `NEXTAUTH_URL` | `http://localhost:47100` | Public URL of the frontend (for OAuth redirects) |
-| `POSTGRES_DB` | `torrenclo` | Database name |
-| `POSTGRES_USER` | `torrenclo_user` | Database user |
-| `GOOGLE_CLIENT_ID` | - | Google OAuth client ID |
-| `ADMIN_EMAIL` | `admin@example.com` | Admin login email |
-| `ADMIN_NAME` | `Admin` | Admin display name |
-| `JWT_ISSUER` | `TorrenClou_API` | JWT issuer claim |
-| `JWT_AUDIENCE` | `TorrenClou_Client` | JWT audience claim |
-| `HANGFIRE_WORKER_COUNT` | `10` | Background job concurrency |
-| `BACKEND_URL` | `http://127.0.0.1:47200` | Override backend URL for server-side requests |
-
-See [`.env.example`](.env.example) for the full list including optional observability settings.
-
-## Stopping and Restarting
+## Everyday commands
 
 ```bash
-# Stop
-docker stop torrencloud
-
-# Start again (data persists)
-docker start torrencloud
-
-# Remove container (data still persists in volumes)
-docker rm torrencloud
-
-# Remove everything including data
-docker rm torrencloud
-docker volume rm torrencloud-pgdata torrencloud-redis torrencloud-downloads
+docker logs -f torrencloud
 ```
-
-## Production Deployment (Separate Services)
-
-For production deployments, use **docker-compose.prod.yml** to run frontend, backend, and workers as separate scalable services:
 
 ```bash
-docker-compose -f docker-compose.prod.yml up -d
+docker restart torrencloud
 ```
 
-**Key differences:**
-- Frontend auto-detects backend API using `window.location`
-- Backend URL for server-side auth configured via `BACKEND_URL=http://backend:8080` (internal Docker network)
-- Separate containers allow independent scaling
-- No supervisord — each service managed independently
+To upgrade, run the install command again. It replaces the container and keeps your
+database, downloads and secrets.
 
-See [docker-compose.prod.yml](docker-compose.prod.yml) for the full configuration.
+## Configuration
 
-## Updating
+In the app, under **Settings** — transfer concurrency, upload failover, what happens to
+local files after an upload, and disk cleanup.
 
-```bash
-docker pull ghcr.io/torrenclou/torrentclou:latest
-docker stop torrencloud && docker rm torrencloud
-# Re-run with the same command or script — volumes persist
-./run.sh
-```
+Environment variables exist only for the cases the app cannot work out for itself: an
+external database, a reverse proxy that rewrites the host, or shipping logs off-box.
+See [Configuration](https://tc.gitnasr.com/docs/configuration).
 
-See [docs/UPDATING.md](docs/UPDATING.md) for the full update guide including database migration considerations.
+> Your data lives in three Docker volumes: `torrencloud-pgdata`, `torrencloud-redis` and
+> `torrencloud-downloads`. `torrencloud-pgdata` also holds the generated secrets — delete
+> it and everyone is logged out.
 
 ## Documentation
 
-- [Usage Guide](docs/USAGE.md) — Detailed setup and configuration
-- [Technical Architecture](docs/TECHNICAL.md) — System design, CI/CD pipeline, internals
-- [Updating Guide](docs/UPDATING.md) — How to update to new versions safely
+Full documentation is at **[tc.gitnasr.com/docs](https://tc.gitnasr.com/docs)**.
 
-## CI/CD
+- [Getting started](https://tc.gitnasr.com/docs/getting-started) — install, first run, creating your account
+- [Usage guide](https://tc.gitnasr.com/docs/usage) — adding torrents, picking files, watching transfers
+- [Configuration](https://tc.gitnasr.com/docs/configuration) — every setting and environment override
+- [Google Drive](https://tc.gitnasr.com/docs/providers/google-drive) and [S3](https://tc.gitnasr.com/docs/providers/s3) — connecting storage
+- [Monitoring](https://tc.gitnasr.com/docs/grafana) — the bundled Grafana dashboards
+- [FAQ](https://tc.gitnasr.com/docs/faq)
 
-Images are built automatically when code is merged to `main` in either the [backend](https://github.com/TorrenClou/backend) or [frontend](https://github.com/TorrenClou/frontend) repository. The build pipeline uses GitHub Actions with cross-repository dispatch.
+## Repositories
 
-Image tags follow the format: `YYYY.MM.DD-<backend-sha>-<frontend-sha>`
+| Repository | Contents |
+|------------|----------|
+| [backend](https://github.com/TorrenClou/backend) | .NET 9 API and workers |
+| [frontend](https://github.com/TorrenClou/frontend) | Next.js web app |
+| [website](https://github.com/TorrenClou/website) | Documentation site — the canonical docs live here |
+| [deploy](https://github.com/TorrenClou/deploy) | Dockerfile, installer, CI — this repo |
 
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to this project.
+Contributions welcome: see
+[CONTRIBUTING.md](https://github.com/TorrenClou/deploy/blob/main/CONTRIBUTING.md).
 
 ## License
 
-This project is proprietary software. All rights reserved.
+MIT — see [LICENSE](https://github.com/TorrenClou/deploy/blob/main/LICENSE).
