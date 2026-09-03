@@ -67,6 +67,15 @@ RUN dotnet publish TorreClou.S3.Worker/TorreClou.S3.Worker.csproj \
 # ---- Stage 3: Runtime ----
 FROM ubuntu:22.04 AS runtime
 
+# Supplied automatically by BuildKit as "amd64" or "arm64". Prometheus and
+# Grafana both publish assets under exactly those names, so it substitutes
+# directly into their download URLs.
+#
+# These downloads were hardcoded to amd64, which meant the arm64 image could
+# never actually build: dpkg refuses an amd64 .deb on arm64. It went unnoticed
+# because the frontend stage timed out first and the build never reached here.
+ARG TARGETARCH
+
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install PostgreSQL 15, Redis, supervisord
@@ -83,16 +92,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Prometheus
-RUN curl -fsSL https://github.com/prometheus/prometheus/releases/download/v2.48.1/prometheus-2.48.1.linux-amd64.tar.gz \
+RUN curl -fsSL "https://github.com/prometheus/prometheus/releases/download/v2.48.1/prometheus-2.48.1.linux-${TARGETARCH}.tar.gz" \
       -o /tmp/prometheus.tar.gz \
     && tar -xzf /tmp/prometheus.tar.gz -C /tmp \
-    && cp /tmp/prometheus-2.48.1.linux-amd64/prometheus /usr/local/bin/ \
-    && cp /tmp/prometheus-2.48.1.linux-amd64/promtool /usr/local/bin/ \
+    && cp "/tmp/prometheus-2.48.1.linux-${TARGETARCH}/prometheus" /usr/local/bin/ \
+    && cp "/tmp/prometheus-2.48.1.linux-${TARGETARCH}/promtool" /usr/local/bin/ \
     && mkdir -p /etc/prometheus /data/prometheus \
     && rm -rf /tmp/prometheus*
 
 # Install Grafana
-RUN curl -fsSL https://dl.grafana.com/oss/release/grafana_10.2.3_amd64.deb -o /tmp/grafana.deb \
+RUN curl -fsSL "https://dl.grafana.com/oss/release/grafana_10.2.3_${TARGETARCH}.deb" -o /tmp/grafana.deb \
     && dpkg -i /tmp/grafana.deb \
     && rm /tmp/grafana.deb
 
