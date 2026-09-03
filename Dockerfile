@@ -1,5 +1,5 @@
 # ============================================================
-# TorrenCloud All-in-One Image
+# TorrenClou All-in-One Image
 # Frontend + API + Workers + PostgreSQL 15 + Redis 7
 # + Prometheus + Grafana
 # ============================================================
@@ -9,13 +9,23 @@ FROM node:20-alpine AS frontend-build
 WORKDIR /app
 
 COPY frontend/package.json frontend/yarn.lock ./
-RUN yarn install --frozen-lockfile
+
+# The long network timeout is for the arm64 build, which runs under QEMU. Yarn's
+# default 30s is not enough there: emulated networking is slow enough that a
+# single package fetch times out with ESOCKETTIMEDOUT and fails the whole build,
+# while the identical amd64 build succeeds.
+#
+# This stage is deliberately NOT pinned to $BUILDPLATFORM the way the .NET
+# stages are. Next's standalone output carries architecture-specific native
+# binaries, and that output is copied straight into the runtime image below, so
+# building it on the wrong architecture would ship a broken frontend.
+RUN yarn install --frozen-lockfile --network-timeout 600000
 
 COPY frontend/ ./
 
-# NOTE: API URL is NOW auto-detected at runtime using window.location
-# No need to bake in NEXT_PUBLIC_API_URL at build time!
-# This allows the same image to work with any deployment server.
+# BACKEND_URL is not needed at build time. The browser calls the relative
+# /proxy/api path and app/proxy/[...path]/route.ts resolves it per request, so
+# one image works against any backend.
 
 RUN npm run build
 
@@ -57,6 +67,15 @@ RUN dotnet publish TorreClou.S3.Worker/TorreClou.S3.Worker.csproj \
 # ---- Stage 3: Runtime ----
 FROM ubuntu:22.04 AS runtime
 
+# Supplied automatically by BuildKit as "amd64" or "arm64". Prometheus and
+# Grafana both publish assets under exactly those names, so it substitutes
+# directly into their download URLs.
+#
+# These downloads were hardcoded to amd64, which meant the arm64 image could
+# never actually build: dpkg refuses an amd64 .deb on arm64. It went unnoticed
+# because the frontend stage timed out first and the build never reached here.
+ARG TARGETARCH
+
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install PostgreSQL 15, Redis, supervisord
@@ -73,16 +92,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Prometheus
-RUN curl -fsSL https://github.com/prometheus/prometheus/releases/download/v2.48.1/prometheus-2.48.1.linux-amd64.tar.gz \
+RUN curl -fsSL "https://github.com/prometheus/prometheus/releases/download/v2.48.1/prometheus-2.48.1.linux-${TARGETARCH}.tar.gz" \
       -o /tmp/prometheus.tar.gz \
     && tar -xzf /tmp/prometheus.tar.gz -C /tmp \
-    && cp /tmp/prometheus-2.48.1.linux-amd64/prometheus /usr/local/bin/ \
-    && cp /tmp/prometheus-2.48.1.linux-amd64/promtool /usr/local/bin/ \
+    && cp "/tmp/prometheus-2.48.1.linux-${TARGETARCH}/prometheus" /usr/local/bin/ \
+    && cp "/tmp/prometheus-2.48.1.linux-${TARGETARCH}/promtool" /usr/local/bin/ \
     && mkdir -p /etc/prometheus /data/prometheus \
     && rm -rf /tmp/prometheus*
 
 # Install Grafana
-RUN curl -fsSL https://dl.grafana.com/oss/release/grafana_10.2.3_amd64.deb -o /tmp/grafana.deb \
+RUN curl -fsSL "https://dl.grafana.com/oss/release/grafana_10.2.3_${TARGETARCH}.deb" -o /tmp/grafana.deb \
     && dpkg -i /tmp/grafana.deb \
     && rm /tmp/grafana.deb
 

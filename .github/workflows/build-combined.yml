@@ -1,6 +1,13 @@
-name: Build Combined TorrenCloud Image
+name: Build Combined TorrenClou Image
 
 on:
+  # Pushes to this repo built nothing at all. The installer, entrypoint,
+  # supervisord config and Dockerfile all live here, so a change to any of them
+  # only reached :latest if backend or frontend happened to push afterwards.
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
   repository_dispatch:
     types: [build-combined]
   workflow_dispatch:
@@ -15,42 +22,34 @@ on:
         default: "main"
 
 concurrency:
-  group: build-combined
+  # Scoped by ref so a pull request build cannot cancel the main build.
+  group: build-combined-${{ github.ref }}
   cancel-in-progress: true
 
 env:
   REGISTRY: ghcr.io
 
 jobs:
-  build-and-push:
+  # Boots the image with no configuration at all and asserts it comes up.
+  # amd64 only: this proves the product's central claim, and proving it twice
+  # would not prove it harder.
+  smoke:
+    name: Smoke test
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
     steps:
       - name: Checkout deploy repo
         uses: actions/checkout@v4
 
-      - name: Set image name (lowercase)
-        id: image
-        run: |
-          echo "name=ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/torrentclou" >> $GITHUB_OUTPUT
-
       - name: Determine refs
         id: refs
         run: |
-          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
-            echo "backend_ref=main" >> $GITHUB_OUTPUT
-            echo "frontend_ref=main" >> $GITHUB_OUTPUT
-            echo "trigger_repo=${{ github.event.client_payload.repository }}" >> $GITHUB_OUTPUT
-            echo "trigger_sha=${{ github.event.client_payload.sha }}" >> $GITHUB_OUTPUT
-          else
-            echo "backend_ref=${{ github.event.inputs.backend_ref || 'main' }}" >> $GITHUB_OUTPUT
-            echo "frontend_ref=${{ github.event.inputs.frontend_ref || 'main' }}" >> $GITHUB_OUTPUT
-            echo "trigger_repo=manual" >> $GITHUB_OUTPUT
-            echo "trigger_sha=manual" >> $GITHUB_OUTPUT
-          fi
+          set -euo pipefail
+          backend_ref="${{ github.event.inputs.backend_ref }}"
+          frontend_ref="${{ github.event.inputs.frontend_ref }}"
+          if [ -z "$backend_ref" ]; then backend_ref="main"; fi
+          if [ -z "$frontend_ref" ]; then frontend_ref="main"; fi
+          echo "backend_ref=${backend_ref}" >> "$GITHUB_OUTPUT"
+          echo "frontend_ref=${frontend_ref}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout backend
         uses: actions/checkout@v4
@@ -68,16 +67,157 @@ jobs:
           path: frontend
           token: ${{ secrets.DEPLOY_PAT }}
 
-      - name: Generate version tags
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build amd64 image for testing
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: torrenclou-smoke:test
+          cache-from: type=gha,scope=amd64
+          cache-to: type=gha,mode=max,scope=amd64
+          platforms: linux/amd64
+
+      - name: Smoke test - boot with no configuration at all
+        run: bash .github/scripts/smoke-test.sh
+
+  # Each architecture builds on a runner of that architecture.
+  #
+  # This was previously one job emulating arm64 through QEMU. That build ran for
+  # 3 hours 41 minutes without finishing and was heading for the 6-hour job
+  # timeout: emulating a .NET runtime install, a Node build, PostgreSQL, Grafana
+  # and Prometheus is far past what QEMU is reasonable for.
+  #
+  # ubuntu-24.04-arm is free for public repositories, so arm64 now builds
+  # natively and the two architectures run in parallel.
+  build:
+    name: Build ${{ matrix.arch }}
+    needs: smoke
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+
+    steps:
+      - name: Checkout deploy repo
+        uses: actions/checkout@v4
+
+      - name: Set image name (lowercase)
+        id: image
+        run: |
+          echo "name=ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/torrentclou" >> "$GITHUB_OUTPUT"
+
+      - name: Determine refs
+        id: refs
+        run: |
+          set -euo pipefail
+          backend_ref="${{ github.event.inputs.backend_ref }}"
+          frontend_ref="${{ github.event.inputs.frontend_ref }}"
+          if [ -z "$backend_ref" ]; then backend_ref="main"; fi
+          if [ -z "$frontend_ref" ]; then frontend_ref="main"; fi
+          echo "backend_ref=${backend_ref}" >> "$GITHUB_OUTPUT"
+          echo "frontend_ref=${frontend_ref}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout backend
+        uses: actions/checkout@v4
+        with:
+          repository: TorrenClou/backend
+          ref: ${{ steps.refs.outputs.backend_ref }}
+          path: backend
+          token: ${{ secrets.DEPLOY_PAT }}
+
+      - name: Checkout frontend
+        uses: actions/checkout@v4
+        with:
+          repository: TorrenClou/frontend
+          ref: ${{ steps.refs.outputs.frontend_ref }}
+          path: frontend
+          token: ${{ secrets.DEPLOY_PAT }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Pushed by digest with no tag. The merge job assembles both digests into
+      # one manifest list and puts the tags on that, so a tag never points at a
+      # single architecture.
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: ${{ matrix.platform }}
+          cache-from: type=gha,scope=${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
+          outputs: type=image,name=${{ steps.image.outputs.name }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
+
+      - name: Export the digest
+        if: github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - name: Upload the digest
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ matrix.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    name: Publish manifest
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Download the digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digest-*
+          merge-multiple: true
+
+      - name: Set image name (lowercase)
+        id: image
+        run: |
+          echo "name=ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/torrentclou" >> "$GITHUB_OUTPUT"
+
+      - name: Generate version tag
         id: version
         run: |
+          set -euo pipefail
           DATE_TAG=$(date +'%Y.%m.%d')
-          BACKEND_SHA=$(cd backend && git rev-parse --short HEAD)
-          FRONTEND_SHA=$(cd frontend && git rev-parse --short HEAD)
-          FULL_TAG="${DATE_TAG}-${BACKEND_SHA}-${FRONTEND_SHA}"
-
-          echo "full_tag=${FULL_TAG}" >> $GITHUB_OUTPUT
-          echo "Image tag: ${FULL_TAG}"
+          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)
+          echo "full_tag=${DATE_TAG}-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -89,24 +229,22 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push combined image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: |
-            ${{ steps.image.outputs.name }}:latest
-            ${{ steps.image.outputs.name }}:${{ steps.version.outputs.full_tag }}
-          labels: |
-            org.opencontainers.image.title=TorrenCloud
-            org.opencontainers.image.description=TorrenCloud All-in-One
-            org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ steps.version.outputs.full_tag }}
-            build.trigger.repository=${{ steps.refs.outputs.trigger_repo }}
-            build.trigger.sha=${{ steps.refs.outputs.trigger_sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          # arm64 included so the one-line installer works on ARM VPS
-          # instances and Raspberry Pi, not only x86 hosts.
-          platforms: linux/amd64,linux/arm64
+      - name: Create the manifest list
+        working-directory: /tmp/digests
+        run: |
+          set -euo pipefail
+          image="${{ steps.image.outputs.name }}"
+          tag="${{ steps.version.outputs.full_tag }}"
+
+          refs=""
+          for digest in *; do
+            refs="${refs} ${image}@sha256:${digest}"
+          done
+          echo "Merging:${refs}"
+
+          docker buildx imagetools create \
+            --tag "${image}:latest" \
+            --tag "${image}:${tag}" \
+            ${refs}
+
+          docker buildx imagetools inspect "${image}:latest"
