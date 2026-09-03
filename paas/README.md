@@ -1,60 +1,42 @@
-# Deploying on a PaaS
+# PaaS blueprints
 
-Full instructions are at **[tc.gitnasr.com/docs](https://tc.gitnasr.com/docs)**.
-This directory holds the files each platform reads.
+Deployment instructions live at
+**[tc.gitnasr.com/docs/paas](https://tc.gitnasr.com/docs/paas)** — one page per
+platform. This file describes what is in this directory and why the files look
+the way they do.
 
-| Platform | File | Notes |
-|----------|------|-------|
-| [Dokploy](dokploy/) | `docker-compose.yml` | Traefik fronts it; attach a domain to port 47100 |
-| [Coolify](coolify/) | `docker-compose.yml` | Uses Coolify's `SERVICE_FQDN_*` magic variables |
-| [Render](render/) | `render.yaml` | Blueprint. Needs the `standard` plan and a 20 GB disk |
-| [Railway](railway/) | `railway.json` + README | Needs a volume at `/data`; not a one-click template yet |
+| Directory | File the platform reads |
+|-----------|-------------------------|
+| `dokploy/` | `docker-compose.yml` |
+| `coolify/` | `docker-compose.yml` |
+| `render/` | `render.yaml` |
+| `railway/` | `railway.json`, plus a README covering what it does not do |
 
-## They all run the all-in-one image, and that is deliberate
+## Why these all run the all-in-one image
 
-The obvious design is one service per component, with managed PostgreSQL and
-Redis. It does not work, for a reason that is easy to miss until you deploy it:
+Worth recording here, because the obvious alternative looks better on paper and
+someone will eventually try it.
 
-**The three workers share a filesystem.** The torrent worker downloads to
-`/data/downloads`; the Google Drive and S3 workers read those files back to
+A service per component with managed PostgreSQL and Redis does not work.
+**The three workers share a filesystem**: the torrent worker downloads into
+`/data/downloads` and the Google Drive and S3 workers read those files back to
 upload them. On Render and Railway a disk attaches to exactly one service, so
 split across services the upload workers cannot see what the torrent worker
-produced and every upload fails. Neither platform offers a shared filesystem to
-fix it with.
+produced. Downloads succeed and every upload fails, with an error that reads
+like bad storage credentials rather than a topology mistake.
 
-Mounting a single volume at `/data` on the all-in-one image solves that, and
-persists the database, Redis and the first-boot secrets at the same time. The
-usual objection — that a PaaS filesystem is ephemeral, so the bundled database
-dies on redeploy — stops applying once there is a disk.
+Neither platform offers a shared filesystem to work around it.
 
-The trade is a larger instance, because it runs nine processes and PostgreSQL.
-Budget at least 2 GB of memory.
+One container with one volume at `/data` avoids the problem and persists the
+database, Redis and the first-boot secrets at the same time. The usual objection
+to an all-in-one image on a PaaS — ephemeral filesystem, database gone on
+redeploy — stops applying once there is a disk. The cost is a larger instance.
 
-If you do want split services, `../compose/docker-compose.split.yml` does it
-properly, because a Docker named volume **can** be shared between containers.
-That is a self-hosting topology, not a PaaS one.
+`../compose/docker-compose.split.yml` keeps the split topology for self-hosting,
+where a Docker named volume **can** be shared between containers.
 
-## The volume is the whole game
+## Volume names
 
-Everything that must survive a redeploy is under `/data`:
-
-| Path | Contents |
-|------|----------|
-| `/data/postgres` | The database **and** the secrets generated on first boot |
-| `/data/redis` | Job state |
-| `/data/downloads` | In-flight downloads, shared by all three workers |
-
-Without it, every deploy is a fresh install: new database, new signing keys,
-every account and storage connection gone. Nothing warns you, because from the
-container's point of view it is simply booting for the first time again.
-
-## Pinning a version
-
-Every file defaults to `latest` and honours `TORRENCLOU_VERSION`:
-
-```
-TORRENCLOU_VERSION=1.1.0
-```
-
-See [Updating](https://tc.gitnasr.com/docs/updating) for what rolling back does
-to the database, and why the guard exists.
+`torrencloud-*`, matching what the installer has always created. A volume name
+is a user-owned identifier: renaming one migrates nothing, it silently starts an
+empty database while the user believes their downloads are gone.
