@@ -16,8 +16,8 @@
   ],
   "backend": {
     "repository": "TorrenClou/backend",
-    "ref": "v2.0.0",
-    "sha": "cf2fb4b1f86d5a26e405fe90add23b82aa17f3ae"
+    "ref": "v2.0.1",
+    "sha": "8af5f803f39caf8f73c6b1862945d37379a785bc"
   },
   "frontend": {
     "repository": "TorrenClou/frontend",
