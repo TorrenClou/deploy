@@ -1,0 +1,27 @@
+{
+  "_comment": [
+    "Exactly which backend and frontend go into the all-in-one image.",
+    "",
+    "The combined build used to check out backend@main and frontend@main at the",
+    "moment it was triggered. That records nothing: the image tag named the two",
+    "commit SHAs, but the build could not be repeated, because 'main' had moved.",
+    "Two dispatches racing each other produced different images from the same",
+    "trigger, and there was no way to rebuild a released image from its tag.",
+    "",
+    "The build now checks out the sha fields below. Rolling back to a released",
+    "image and rebuilding that release produce the same software, which is what",
+    "makes the rollback documented in the Updating guide mean anything.",
+    "",
+    "ref is provenance for humans. sha is what the build uses."
+  ],
+  "backend": {
+    "repository": "TorrenClou/backend",
+    "ref": "v1.1.0",
+    "sha": "649c1308ba1e981fac338e94dcd2618347edd2b0"
+  },
+  "frontend": {
+    "repository": "TorrenClou/frontend",
+    "ref": "v0.1.1",
+    "sha": "9286e98a4721814321d02bc244054c40cc7c79a2"
+  }
+}

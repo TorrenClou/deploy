@@ -8,8 +8,6 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-  repository_dispatch:
-    types: [build-combined]
   workflow_dispatch:
     inputs:
       backend_ref:
@@ -44,10 +42,22 @@ jobs:
         id: refs
         run: |
           set -euo pipefail
+          # Pinned in components.lock.json, not taken from "main".
+          #
+          # This used to check out backend@main and frontend@main at the moment
+          # the build was triggered, so a released image could never be rebuilt:
+          # the tag recorded the two SHAs, but "main" had already moved. Two
+          # dispatches racing each other produced different images from one
+          # trigger.
+          #
+          # A workflow_dispatch input still overrides, for testing an unreleased
+          # combination by hand.
           backend_ref="${{ github.event.inputs.backend_ref }}"
           frontend_ref="${{ github.event.inputs.frontend_ref }}"
-          if [ -z "$backend_ref" ]; then backend_ref="main"; fi
-          if [ -z "$frontend_ref" ]; then frontend_ref="main"; fi
+          if [ -z "$backend_ref" ]; then backend_ref=$(jq -r '.backend.sha' components.lock.json); fi
+          if [ -z "$frontend_ref" ]; then frontend_ref=$(jq -r '.frontend.sha' components.lock.json); fi
+          echo "backend  -> ${backend_ref}"
+          echo "frontend -> ${frontend_ref}"
           echo "backend_ref=${backend_ref}" >> "$GITHUB_OUTPUT"
           echo "frontend_ref=${frontend_ref}" >> "$GITHUB_OUTPUT"
 
@@ -125,10 +135,22 @@ jobs:
         id: refs
         run: |
           set -euo pipefail
+          # Pinned in components.lock.json, not taken from "main".
+          #
+          # This used to check out backend@main and frontend@main at the moment
+          # the build was triggered, so a released image could never be rebuilt:
+          # the tag recorded the two SHAs, but "main" had already moved. Two
+          # dispatches racing each other produced different images from one
+          # trigger.
+          #
+          # A workflow_dispatch input still overrides, for testing an unreleased
+          # combination by hand.
           backend_ref="${{ github.event.inputs.backend_ref }}"
           frontend_ref="${{ github.event.inputs.frontend_ref }}"
-          if [ -z "$backend_ref" ]; then backend_ref="main"; fi
-          if [ -z "$frontend_ref" ]; then frontend_ref="main"; fi
+          if [ -z "$backend_ref" ]; then backend_ref=$(jq -r '.backend.sha' components.lock.json); fi
+          if [ -z "$frontend_ref" ]; then frontend_ref=$(jq -r '.frontend.sha' components.lock.json); fi
+          echo "backend  -> ${backend_ref}"
+          echo "frontend -> ${frontend_ref}"
           echo "backend_ref=${backend_ref}" >> "$GITHUB_OUTPUT"
           echo "frontend_ref=${frontend_ref}" >> "$GITHUB_OUTPUT"
 

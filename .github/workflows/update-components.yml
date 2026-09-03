@@ -1,0 +1,133 @@
+name: Update components
+
+# Backend and frontend fire this when they merge to main. It used to trigger the
+# combined build directly, from whatever "main" happened to be at that instant.
+# That is what made released images impossible to rebuild.
+#
+# Now it proposes a change to components.lock.json instead. Merging that PR is
+# what moves the product forward, and the merge is an ordinary push to main, so
+# the normal build runs and produces an image from a combination that is written
+# down.
+on:
+  repository_dispatch:
+    types: [build-combined]
+  workflow_dispatch:
+    inputs:
+      component:
+        description: "backend or frontend"
+        required: true
+      sha:
+        description: "Commit SHA to pin"
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: update-components
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Work out what changed
+        id: input
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            repo="${{ github.event.client_payload.repository }}"
+            sha="${{ github.event.client_payload.sha }}"
+            component="${repo##*/}"
+          else
+            component="${{ github.event.inputs.component }}"
+            sha="${{ github.event.inputs.sha }}"
+            repo="TorrenClou/${component}"
+          fi
+
+          case "$component" in
+            backend|frontend) ;;
+            *) echo "::error::Unknown component '${component}'"; exit 1 ;;
+          esac
+
+          echo "component=${component}" >> "$GITHUB_OUTPUT"
+          echo "repo=${repo}" >> "$GITHUB_OUTPUT"
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve a human-readable ref
+        id: ref
+        env:
+          GH_TOKEN: ${{ secrets.DEPLOY_PAT }}
+        run: |
+          set -euo pipefail
+          repo="${{ steps.input.outputs.repo }}"
+          sha="${{ steps.input.outputs.sha }}"
+
+          # Prefer a release tag pointing at this commit; fall back to main.
+          ref=$(gh api "repos/${repo}/tags" --jq \
+            "[.[] | select(.commit.sha == \"${sha}\")] | .[0].name // empty" 2>/dev/null || true)
+          [ -z "$ref" ] && ref="main"
+
+          echo "ref=${ref}" >> "$GITHUB_OUTPUT"
+          echo "Pinning ${repo} to ${ref} (${sha})"
+
+      - name: Update the lockfile
+        id: lock
+        run: |
+          set -euo pipefail
+          component="${{ steps.input.outputs.component }}"
+          sha="${{ steps.input.outputs.sha }}"
+          ref="${{ steps.ref.outputs.ref }}"
+
+          before=$(jq -r ".${component}.sha" components.lock.json)
+          if [ "$before" = "$sha" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Already pinned to ${sha}; nothing to do."
+            exit 0
+          fi
+
+          jq --arg c "$component" --arg s "$sha" --arg r "$ref" \
+            '.[$c].sha = $s | .[$c].ref = $r' components.lock.json > components.lock.json.tmp
+          mv components.lock.json.tmp components.lock.json
+
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "before=${before}" >> "$GITHUB_OUTPUT"
+
+      - name: Open or update the bump PR
+        if: steps.lock.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          component="${{ steps.input.outputs.component }}"
+          sha="${{ steps.input.outputs.sha }}"
+          ref="${{ steps.ref.outputs.ref }}"
+          short="${sha:0:8}"
+          branch="components/${component}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git checkout -B "$branch"
+          git add components.lock.json
+          git commit -m "deps(${component}): pin to ${ref} (${short})"
+          git push --force-with-lease origin "$branch"
+
+          existing=$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')
+          title="deps(${component}): pin to ${ref} (${short})"
+          body="Pins \`${component}\` to [\`${short}\`](https://github.com/${{ steps.input.outputs.repo }}/commit/${sha}) (\`${ref}\`).
+
+          Merging this rebuilds the all-in-one image from a combination that is written down, rather than from whatever \`main\` happened to be when the build was triggered.
+
+          Previously ${component} merging to main triggered the combined build directly, which meant a released image could never be rebuilt: the tag recorded the SHAs, but \`main\` had already moved."
+
+          if [ -n "$existing" ]; then
+            gh pr edit "$existing" --title "$title" --body "$body"
+            echo "Updated PR #${existing}"
+          else
+            gh pr create --base main --head "$branch" --title "$title" --body "$body"
+          fi
