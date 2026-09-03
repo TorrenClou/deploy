@@ -1,0 +1,69 @@
+# TorrenClou — all-in-one.
+#
+# One container: frontend, API, three workers, PostgreSQL, Redis, Prometheus and
+# Grafana, managed by supervisord. This is what the installer runs and what
+# Dokploy and Coolify should point at.
+#
+#   docker compose -f compose/docker-compose.yml up -d
+#
+# No configuration is required. The container generates its own secrets on first
+# boot and keeps them on the postgres volume. Every variable below is an
+# optional override.
+#
+# For managed Postgres and Redis — which Railway and Render want — use
+# docker-compose.split.yml instead.
+
+services:
+  torrenclou:
+    image: ghcr.io/torrenclou/torrentclou:${TORRENCLOU_VERSION:-latest}
+    container_name: torrenclou
+    restart: unless-stopped
+
+    ports:
+      # Only this one needs to be reachable for normal use.
+      - "${FRONTEND_PORT:-47100}:47100"
+      # The API. The browser reaches it through the frontend's same-origin
+      # proxy, so publishing this is optional — and it carries an
+      # unauthenticated Hangfire dashboard, so prefer not to.
+      # - "${API_PORT:-47200}:47200"
+      # - "${GRAFANA_PORT:-47500}:47500"
+      # - "${PROMETHEUS_PORT:-47600}:47600"
+
+    volumes:
+      # Holds the database AND the generated secrets. Losing it logs everyone
+      # out and orphans the database password. Back this one up.
+      - torrencloud-pgdata:/data/postgres
+      - torrencloud-redis:/data/redis
+      - torrencloud-downloads:/data/downloads
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:47200/api/health/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+# The names are torrencloud-* rather than torrenclou-* deliberately. That is
+# what the installer has always created, and a volume name is a user-owned
+# identifier: renaming one does not migrate anything, it silently starts a fresh
+# database and leaves the user believing their downloads are gone.
+#
+# Compose still prefixes these with the project name, so `compose up` on a
+# machine that was set up with install.sh creates NEW empty volumes rather than
+# adopting the existing ones. To adopt an existing install instead, declare them
+# external:
+#
+#   volumes:
+#     torrencloud-pgdata:
+#       external: true
+#     torrencloud-redis:
+#       external: true
+#     torrencloud-downloads:
+#       external: true
+#
+# Do that only when those volumes already exist; external volumes are not
+# created on demand.
+volumes:
+  torrencloud-pgdata:
+  torrencloud-redis:
+  torrencloud-downloads:

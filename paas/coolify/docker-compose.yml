@@ -1,0 +1,34 @@
+# TorrenClou on Coolify.
+#
+# Add as a "Docker Compose" resource pointing at this file. Coolify's magic
+# variables generate the domain and inject it, so nothing needs configuring by
+# hand.
+
+services:
+  torrenclou:
+    image: ghcr.io/torrenclou/torrentclou:${TORRENCLOU_VERSION:-latest}
+    restart: unless-stopped
+
+    environment:
+      # Coolify replaces SERVICE_FQDN_* with the generated domain and creates the
+      # proxy route to the port named in it. 47100 is the web interface.
+      - SERVICE_FQDN_TORRENCLOU_47100
+      - PUBLIC_FRONTEND_URL=${SERVICE_FQDN_TORRENCLOU}
+      - NEXTAUTH_URL=${SERVICE_FQDN_TORRENCLOU}
+
+    volumes:
+      - torrencloud-pgdata:/data/postgres
+      - torrencloud-redis:/data/redis
+      - torrencloud-downloads:/data/downloads
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:47200/api/health/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+volumes:
+  torrencloud-pgdata:
+  torrencloud-redis:
+  torrencloud-downloads:

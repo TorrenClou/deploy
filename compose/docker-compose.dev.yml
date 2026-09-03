@@ -1,0 +1,52 @@
+# TorrenClou — build from source.
+#
+# For working on the all-in-one image itself. Expects the three repositories
+# checked out as siblings:
+#
+#   TorrenClou/
+#   ├── backend/
+#   ├── frontend/
+#   └── deploy/     <- run from here
+#
+#   docker compose -f compose/docker-compose.dev.yml up --build
+#
+# The Dockerfile copies backend/ and frontend/ out of the build context, which is
+# why the context is the parent directory rather than this repo.
+#
+# This replaces docker-compose.prod.yml, which pointed its build contexts at
+# TorrenClouBackend/ and ../TorrenClouFrontend — directories that do not exist
+# under those names in any checkout. That file had never successfully built.
+
+services:
+  torrenclou:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: torrenclou-local:dev
+    container_name: torrenclou-dev
+    restart: unless-stopped
+
+    ports:
+      - "47100:47100"
+      - "47200:47200"
+      - "47500:47500"
+      - "47600:47600"
+
+    volumes:
+      - dev-pgdata:/data/postgres
+      - dev-redis:/data/redis
+      - dev-downloads:/data/downloads
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:47200/api/health/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+# Prefixed dev- so a local build never touches the volumes of a real install on
+# the same machine.
+volumes:
+  dev-pgdata:
+  dev-redis:
+  dev-downloads:
