@@ -21,7 +21,7 @@
   },
   "frontend": {
     "repository": "TorrenClou/frontend",
-    "ref": "v0.1.1",
-    "sha": "9286e98a4721814321d02bc244054c40cc7c79a2"
+    "ref": "v0.1.2",
+    "sha": "88f12d32d0db7c47ed330cbb8baf844d3e1a6cd9"
   }
 }
