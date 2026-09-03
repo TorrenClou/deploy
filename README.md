@@ -78,12 +78,18 @@ See [Configuration](https://tc.gitnasr.com/docs/configuration).
 
 Full documentation is at **[tc.gitnasr.com/docs](https://tc.gitnasr.com/docs)**.
 
-- [Getting started](https://tc.gitnasr.com/docs/getting-started) — install, first run, creating your account
+- [Getting started](https://tc.gitnasr.com/docs/getting-started) — install, ports, reverse proxies, custom domains
+- [First-run setup](https://tc.gitnasr.com/docs/first-run) — creating your account, connecting storage
 - [Usage guide](https://tc.gitnasr.com/docs/usage) — adding torrents, picking files, watching transfers
 - [Configuration](https://tc.gitnasr.com/docs/configuration) — every setting and environment override
 - [Google Drive](https://tc.gitnasr.com/docs/providers/google-drive) and [S3](https://tc.gitnasr.com/docs/providers/s3) — connecting storage
+- [Updating](https://tc.gitnasr.com/docs/updating) — upgrades, backups, rolling back
 - [Monitoring](https://tc.gitnasr.com/docs/grafana) — the bundled Grafana dashboards
+- [Security](https://tc.gitnasr.com/docs/security) — read this before exposing an instance
+- [Troubleshooting](https://tc.gitnasr.com/docs/troubleshooting)
+- [Architecture](https://tc.gitnasr.com/docs/architecture) — what runs inside the container
 - [FAQ](https://tc.gitnasr.com/docs/faq)
+
 
 ## Repositories
 
