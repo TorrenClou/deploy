@@ -1,5 +1,5 @@
 # ============================================================
-# TorrenCloud All-in-One Image
+# TorrenClou All-in-One Image
 # Frontend + API + Workers + PostgreSQL 15 + Redis 7
 # + Prometheus + Grafana
 # ============================================================
@@ -9,13 +9,23 @@ FROM node:20-alpine AS frontend-build
 WORKDIR /app
 
 COPY frontend/package.json frontend/yarn.lock ./
-RUN yarn install --frozen-lockfile
+
+# The long network timeout is for the arm64 build, which runs under QEMU. Yarn's
+# default 30s is not enough there: emulated networking is slow enough that a
+# single package fetch times out with ESOCKETTIMEDOUT and fails the whole build,
+# while the identical amd64 build succeeds.
+#
+# This stage is deliberately NOT pinned to $BUILDPLATFORM the way the .NET
+# stages are. Next's standalone output carries architecture-specific native
+# binaries, and that output is copied straight into the runtime image below, so
+# building it on the wrong architecture would ship a broken frontend.
+RUN yarn install --frozen-lockfile --network-timeout 600000
 
 COPY frontend/ ./
 
-# NOTE: API URL is NOW auto-detected at runtime using window.location
-# No need to bake in NEXT_PUBLIC_API_URL at build time!
-# This allows the same image to work with any deployment server.
+# BACKEND_URL is not needed at build time. The browser calls the relative
+# /proxy/api path and app/proxy/[...path]/route.ts resolves it per request, so
+# one image works against any backend.
 
 RUN npm run build
 
