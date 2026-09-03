@@ -1,6 +1,13 @@
-name: Build Combined TorrenCloud Image
+name: Build Combined TorrenClou Image
 
 on:
+  # Pushes to this repo built nothing at all. The installer, entrypoint,
+  # supervisord config and Dockerfile all live here, so a change to any of them
+  # only reached :latest if backend or frontend happened to push afterwards.
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
   repository_dispatch:
     types: [build-combined]
   workflow_dispatch:
@@ -15,7 +22,8 @@ on:
         default: "main"
 
 concurrency:
-  group: build-combined
+  # Scoped by ref so a pull request build cannot cancel the main build.
+  group: build-combined-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -45,11 +53,16 @@ jobs:
             echo "frontend_ref=main" >> $GITHUB_OUTPUT
             echo "trigger_repo=${{ github.event.client_payload.repository }}" >> $GITHUB_OUTPUT
             echo "trigger_sha=${{ github.event.client_payload.sha }}" >> $GITHUB_OUTPUT
-          else
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "backend_ref=${{ github.event.inputs.backend_ref || 'main' }}" >> $GITHUB_OUTPUT
             echo "frontend_ref=${{ github.event.inputs.frontend_ref || 'main' }}" >> $GITHUB_OUTPUT
             echo "trigger_repo=manual" >> $GITHUB_OUTPUT
             echo "trigger_sha=manual" >> $GITHUB_OUTPUT
+          else
+            echo "backend_ref=main" >> $GITHUB_OUTPUT
+            echo "frontend_ref=main" >> $GITHUB_OUTPUT
+            echo "trigger_repo=${{ github.repository }}" >> $GITHUB_OUTPUT
+            echo "trigger_sha=${{ github.sha }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Checkout backend
@@ -75,14 +88,35 @@ jobs:
           BACKEND_SHA=$(cd backend && git rev-parse --short HEAD)
           FRONTEND_SHA=$(cd frontend && git rev-parse --short HEAD)
           FULL_TAG="${DATE_TAG}-${BACKEND_SHA}-${FRONTEND_SHA}"
-
           echo "full_tag=${FULL_TAG}" >> $GITHUB_OUTPUT
           echo "Image tag: ${FULL_TAG}"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # Built for amd64 only and loaded into the local daemon so the smoke test
+      # below can run it. A multi-platform build cannot be --load-ed. The push
+      # step afterwards reuses this cache, so this is not a second full build.
+      - name: Build amd64 image for testing
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: torrenclou-smoke:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+      - name: Smoke test - boot with no configuration at all
+        run: bash .github/scripts/smoke-test.sh
+
       - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -94,13 +128,17 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          push: true
+          push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ steps.image.outputs.name }}:latest
             ${{ steps.image.outputs.name }}:${{ steps.version.outputs.full_tag }}
           labels: |
-            org.opencontainers.image.title=TorrenCloud
-            org.opencontainers.image.description=TorrenCloud All-in-One
+            org.opencontainers.image.title=TorrenClou
+            org.opencontainers.image.description=TorrenClou All-in-One - self-hosted torrent-to-cloud
+            org.opencontainers.image.vendor=TorrenClou
+            org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.url=https://tc.gitnasr.com
+            org.opencontainers.image.documentation=https://tc.gitnasr.com/docs
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ steps.version.outputs.full_tag }}
             build.trigger.repository=${{ steps.refs.outputs.trigger_repo }}
