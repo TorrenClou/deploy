@@ -8,18 +8,23 @@
 FROM node:20-alpine AS frontend-build
 WORKDIR /app
 
-COPY frontend/package.json frontend/yarn.lock ./
+COPY frontend/package.json frontend/package-lock.json ./
 
-# The long network timeout is for the arm64 build, which runs under QEMU. Yarn's
-# default 30s is not enough there: emulated networking is slow enough that a
-# single package fetch times out with ESOCKETTIMEDOUT and fails the whole build,
-# while the identical amd64 build succeeds.
+# npm ci against package-lock.json, matching what the frontend repo's own
+# Dockerfile and CI use. This stage previously ran yarn against yarn.lock, so
+# the all-in-one image and the standalone frontend image resolved dependencies
+# from two different lockfiles that nothing kept in agreement — the two
+# artifacts a user can install could ship different transitive versions of the
+# same application.
+#
+# The arm64 network timeout that used to be configured here is no longer needed:
+# arm64 builds on a native runner now rather than under QEMU.
 #
 # This stage is deliberately NOT pinned to $BUILDPLATFORM the way the .NET
 # stages are. Next's standalone output carries architecture-specific native
 # binaries, and that output is copied straight into the runtime image below, so
 # building it on the wrong architecture would ship a broken frontend.
-RUN yarn install --frozen-lockfile --network-timeout 600000
+RUN npm ci --no-audit --no-fund
 
 COPY frontend/ ./
 
