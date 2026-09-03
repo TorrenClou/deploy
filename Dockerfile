@@ -39,34 +39,34 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS backend-build
 WORKDIR /src
 
 # Copy solution and project files for dependency restoration
-COPY backend/TorreClou.sln .
-COPY backend/TorreClou.Core/TorreClou.Core.csproj TorreClou.Core/
-COPY backend/TorreClou.Application/TorreClou.Application.csproj TorreClou.Application/
-COPY backend/TorreClou.Infrastructure/TorreClou.Infrastructure.csproj TorreClou.Infrastructure/
-COPY backend/TorreClou.API/TorreClou.API.csproj TorreClou.API/
-COPY backend/TorreClou.Worker/TorreClou.Worker.csproj TorreClou.Worker/
-COPY backend/TorreClou.GoogleDrive.Worker/TorreClou.GoogleDrive.Worker.csproj TorreClou.GoogleDrive.Worker/
-COPY backend/TorreClou.S3.Worker/TorreClou.S3.Worker.csproj TorreClou.S3.Worker/
+COPY backend/TorrenClou.sln .
+COPY backend/TorrenClou.Core/TorrenClou.Core.csproj TorrenClou.Core/
+COPY backend/TorrenClou.Application/TorrenClou.Application.csproj TorrenClou.Application/
+COPY backend/TorrenClou.Infrastructure/TorrenClou.Infrastructure.csproj TorrenClou.Infrastructure/
+COPY backend/TorrenClou.API/TorrenClou.API.csproj TorrenClou.API/
+COPY backend/TorrenClou.Worker/TorrenClou.Worker.csproj TorrenClou.Worker/
+COPY backend/TorrenClou.GoogleDrive.Worker/TorrenClou.GoogleDrive.Worker.csproj TorrenClou.GoogleDrive.Worker/
+COPY backend/TorrenClou.S3.Worker/TorrenClou.S3.Worker.csproj TorrenClou.S3.Worker/
 
-RUN dotnet restore TorreClou.sln
+RUN dotnet restore TorrenClou.sln
 
 # Copy all source code
-COPY backend/TorreClou.Core/ TorreClou.Core/
-COPY backend/TorreClou.Application/ TorreClou.Application/
-COPY backend/TorreClou.Infrastructure/ TorreClou.Infrastructure/
-COPY backend/TorreClou.API/ TorreClou.API/
-COPY backend/TorreClou.Worker/ TorreClou.Worker/
-COPY backend/TorreClou.GoogleDrive.Worker/ TorreClou.GoogleDrive.Worker/
-COPY backend/TorreClou.S3.Worker/ TorreClou.S3.Worker/
+COPY backend/TorrenClou.Core/ TorrenClou.Core/
+COPY backend/TorrenClou.Application/ TorrenClou.Application/
+COPY backend/TorrenClou.Infrastructure/ TorrenClou.Infrastructure/
+COPY backend/TorrenClou.API/ TorrenClou.API/
+COPY backend/TorrenClou.Worker/ TorrenClou.Worker/
+COPY backend/TorrenClou.GoogleDrive.Worker/ TorrenClou.GoogleDrive.Worker/
+COPY backend/TorrenClou.S3.Worker/ TorrenClou.S3.Worker/
 
 # Publish each project to its own directory
-RUN dotnet publish TorreClou.API/TorreClou.API.csproj \
+RUN dotnet publish TorrenClou.API/TorrenClou.API.csproj \
       -c Release --no-restore -o /publish/api /p:UseAppHost=false
-RUN dotnet publish TorreClou.Worker/TorreClou.Worker.csproj \
+RUN dotnet publish TorrenClou.Worker/TorrenClou.Worker.csproj \
       -c Release --no-restore -o /publish/torrent-worker /p:UseAppHost=false
-RUN dotnet publish TorreClou.GoogleDrive.Worker/TorreClou.GoogleDrive.Worker.csproj \
+RUN dotnet publish TorrenClou.GoogleDrive.Worker/TorrenClou.GoogleDrive.Worker.csproj \
       -c Release --no-restore -o /publish/gdrive-worker /p:UseAppHost=false
-RUN dotnet publish TorreClou.S3.Worker/TorreClou.S3.Worker.csproj \
+RUN dotnet publish TorrenClou.S3.Worker/TorrenClou.S3.Worker.csproj \
       -c Release --no-restore -o /publish/s3-worker /p:UseAppHost=false
 
 # ---- Stage 3: Runtime ----

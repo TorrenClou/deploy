@@ -115,7 +115,12 @@ jobs:
           git checkout -B "$branch"
           git add components.lock.json
           git commit -m "deps(${component}): pin to ${ref} (${short})"
-          git push --force-with-lease origin "$branch"
+          # Plain --force, not --force-with-lease. The branch is recreated from
+          # main on every run and its contents are fully determined by one jq
+          # edit, so there is nothing on it to lose. --force-with-lease needs a
+          # remote-tracking ref that a freshly created local branch does not
+          # have, and fails with "stale info" on every bump after the first.
+          git push --force origin "$branch"
 
           existing=$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')
           title="deps(${component}): pin to ${ref} (${short})"

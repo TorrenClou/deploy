@@ -3,7 +3,7 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
-  # TorreClou API - OpenTelemetry metrics endpoint
+  # TorrenClou API - OpenTelemetry metrics endpoint
   - job_name: 'torrenclo-api'
     static_configs:
       - targets: ['127.0.0.1:47200']
